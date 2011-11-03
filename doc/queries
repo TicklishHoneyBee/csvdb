@@ -1,0 +1,35 @@
+###############################################################################
+			CSVDB SUPPORTED QUERIES
+###############################################################################
+
+SELECT
+    [ALL | DISTINCT ]
+    select_expr [, select_expr ...]
+    [FROM {table_reference | file_reference}
+    [WHERE where_condition]
+    [GROUP BY {col_name | expr | position} [, ... ]]
+    [ORDER BY {col_name | expr | position}
+      [ASC | DESC], ...]
+    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+    [INTO OUTFILE 'file_name']
+
+
+DROP [TEMPORARY | PERMANENT] TABLE [IF EXISTS]
+    tbl_name
+
+{DESCRIBE | DESC} tbl_name
+
+LOAD DATA INFILE [WITHOUT NAMES] 'file_name'
+    [AS alias]
+    [INTO TABLE 'file_name']
+
+SHOW TABLES
+    [LIKE 'pattern']
+
+###############################################################################
+				CSVDB SHELL ONLY
+###############################################################################
+
+DELIMITER char
+
+QUIT

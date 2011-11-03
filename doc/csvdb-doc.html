@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>csvDB Documentation</title>
+	<style type="text/css">
+body {font-size:14px; max-width:1000px; margin:0 auto;}
+header {display:block; font-weight:bold; margin-bottom:15px; font-size:150%; text-align:center;}
+header.title {margin-bottom:30px; font-size:200%;}
+section {display:block; margin:10px;}
+p {margin:0; margin-bottom:10px; line-height:1.5em;}
+pre {margin:5px; padding:5px; font-size:12px; border:1px solid #B9B9B9; color:#505050; background:#FFFFEE; overflow:hidden; white-space: pre-wrap;}
+ul.none {list-style-type:none;}
+li {line-height:1.5em;}
+table {border:0px;}
+span.code {border:1px solid #B9B9B9; color:#505050; background:#FFFFEE; padding:1px;}
+section.footer {text-align:center; font-size:10px;}
+.bold {font-weight:bold;}
+.key {font-weight:bold; font-style:italic; font-size:12px; color:#505050;}
+.plain {text-decoration:none; color:#000000;}
+	</style>
+</head>
+<body>
+	<header class="title">csvDB Documentation</header>
+	<section>
+		<header>Sections</header>
+		<ul class="none">
+			<li><a href="#about">What is csvDB?</a></li>
+			<li><a href="#basic">Basic Info</a></li>
+			<li><a href="#examples">Examples</a></li>
+			<li><a href="#queries">Queries</a></li>
+		</ul>
+	</section>
+
+	<section id="about">
+		<header>What is csvDB?</header>
+<p>csvDB is an SQL engine for CSV (comma separated values) and Apache web server log files, allowing files to be searched as if they were database tables. It includes both a library and a client, allowing it to be used programatically and from the command line.</p>
+<p><a href="#">Back to Menu</a></p>
+	</section>
+	<section id="basic">
+		<header>Basic Info</header>
+<pre>
+csvdb [-f &lt;file&gt;]  [-a &lt;file&gt;] [-n &lt;alias&gt;] [-e &lt;query&gt;]
+</pre>
+<p>If no -e query is given on the command line, the csvdb interactive shell will open.</p>
+<p><span class="code">-f &lt;file&gt;</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;Load &lt;file&gt; as a table. Multiple -f arguments can be used to include multiple files</p>
+
+<p><span class="code">-a &lt;file&gt;</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;Load apache log file &lt;file&gt; as a table. Multiple -a arguments can be used to include multiple files</p>
+
+<p><span class="code">-n &lt;alias&gt;</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;Set &lt;alias&gt; as a name alias for the previous file loaded with -f or -a</p>
+
+<p><span class="code">-e &lt;query&gt;</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;Execute &lt;query&gt;</p>
+<p><a href="#">Back to Menu</a></p>
+	</section>
+
+	<section id="examples">
+		<header>Examples</header>
+<pre>
+csvdb -f test.csv -e "DESCRIBE FILE"
+</pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Load test.csv and describe (list) it's columns</p>
+
+<pre>
+csvdb -f test.csv -n test
+</pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Load test.csv with alias test, and start the csvdb shell</p>
+
+<pre>
+csvdb -f test.csv -f /home/user/example.csv
+</pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Load test.csv and /home/user/example.csv, and start the csvdb shell</p>
+
+<pre>
+csvdb
+</pre>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;Start the csvdb shell</p>
+<p><a href="#">Back to Menu</a></p>
+	</section>
+
+	<section id="queries">
+		<header>Queries</header>
+<p>csvDB has a fair - but nowhere near complete - subset of SQL available, currently this is primarily focused on searching tables/files.
+
+		<ul class="none">
+			<li><a href="#q-select">SELECT</a></li>
+			<li><a href="#q-load">LOAD DATA</a></li>
+			<li><a href="#q-drop">DROP</a></li>
+			<li><a href="#q-show">SHOW TABLES</a></li>
+			<li><a href="#q-describe">SHOW COLUMNS</a></li>
+			<li><a href="#q-describe">DESCRIBE</a></li>
+			<li><a href="#q-update">UPDATE</a></li>
+			<li><a href="#q-insert">INSERT</a></li>
+			<li><a href="#q-create">CREATE</a></li>
+			<li><a href="#q-delete">DELETE</a></li>
+		</ul>
+<p><a href="#">Back to Menu</a></p>
+	</section>
+
+	<section id="q-select">
+		<header>SELECT</header>
+<pre>
+SELECT
+&nbsp;&nbsp;&nbsp;&nbsp;[ALL | DISTINCT]
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">select_expr</span> [, <span class="key">select_expr ...</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[FROM {<span class="key">table_reference</span> | <span class="key">file_reference</span>}
+&nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[GROUP BY {<span class="key">col_name</span> | <span class="key">expr</span>} [, <span class="key">...</span> ]]
+&nbsp;&nbsp;&nbsp;&nbsp;[ORDER BY {<span class="key">col_name</span> | <span class="key">expr</span>}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[AS {INT | STRING}] [ASC | DESC], <span class="key">...</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[LIMIT {[<span class="key">offset</span>,] <span class="key">row_count</span> | <span class="key">row_count</span> OFFSET <span class="key">offset</span>}]
+&nbsp;&nbsp;&nbsp;&nbsp;[INTO OUTFILE '<span class="key">file_name</span>']
+</pre>
+<p>SELECT is used to retrieve rows selected from one table; UNION, JOIN, and subqueries are not currently supported.</p>
+<p>The most commonly used clauses of SELECT statements are:</p>
+<ul>
+	<li>Each <span class="key">select_expr</span> indicates a column that you want to retrieve. There must be at least one <span class="key">select_expr</span>.</li>
+	<li><span class="key">table_reference</span> or <span class="key">file_reference</span> indicates the table or file from which to retrieve rows.</li>
+	<li>The WHERE clause, if given, indicates the condition or conditions that rows must satisfy to be selected. <span class="key">where_condition</span> is an expression that evaluates to true for each row to be selected. The statement selects all rows if there is no WHERE clause.</li>
+</ul>
+<p>The list of <span class="key">select_expr</span> terms comprises the list of columns to retrieve. Terms specify a column or expression or * can be used as shorthand to select all columns:</p>
+<pre>
+SELECT * FROM table;
+</pre>
+<p>The * expression is specially optimised, so is more efficient, and faster than specifying all rows individually.</p>
+<p>A <span class="key">select_expr</span> can be given an alias using AS <span class="key">alias_name</span>. The alias is used as the expression's column name and can be used in GROUP BY, ORDER BY, and WHERE clauses. For example:</p>
+<pre>
+SELECT columna AS c FROM mytable ORDER BY c;
+</pre>
+<p>The AS keyword is required when aliasing a <span class="key">select_expr</span> with an identifier, therefore this will cause an error:</p>
+<pre>
+SELECT columna c FROM mytable ORDER BY c;
+</pre>
+<p>Column aliases on dynamic values (such as COUNT()) cannot be used in a WHERE clause.</p>
+<p>Columns can be either a column name, a dynamic value (such as COUNT()) or a position reference using COLUMN(<span class="key">num</span>) where <span class="key">num</span> is a numeric value indicating the position of the column in the table.</p>
+<pre>
+SELECT COLUMN(1) FROM mytable;
+</pre>
+<p>This selects the first column from mytable.</p>
+<p>The DISTINCT keyword will select only rows where the column has a unique value. ALL will select all rows regardless of duplicate values, this is the default behaviour.</p>
+
+<p>The <span class="key">table_reference</span> or <span class="key">file_reference</span> indicates the table or file from which to retrieve rows.</p>
+<p><span class="key">table_reference</span> or <span class="key">file_reference</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p>There is currently no support for assigning table aliases in a SELECT query, therefore this will throw an error:</p>
+<pre>
+SELECT columna FROM mytable AS t;
+</pre>
+
+<p><span class="key">where_condition</span> is currently limited to '=', LIKE, and IS comparisons only:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb = 'something';
+SELECT columna FROM mytable WHERE columnb LIKE 'something';
+SELECT columna FROM mytable WHERE columnb IS 'something';
+</pre>
+<p>The wildcard '%' can also be used to match part of a value:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb LIKE 'some%';
+</pre>
+<p>'%%' can be used to match a literal '%' character:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb = '100%%';
+</pre>
+<p>Enclosing values in single quotes, as shown above, is optional, the result is that comparison between columns is not supported.</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb = columna;
+</pre>
+<p>This will compare the string 'columna' against the value of columnb. However the keyword NULL will only match against a value which does not exist. This typically only happens where a row in csv file has less columns than the table.</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb IS NULL;
+</pre>
+
+<p><span class="key">col_name</span> or <span class="key">expr</span> in ORDER BY and GROUP BY clauses can be the column's name, an alias as specified in a <span class="key">select_expr</span>, or a position reference using COLUMN(<span class="key">num</span>) where <span class="key">num</span> is a numeric value indicating the position of the column in the table.</p>
+<pre>
+SELECT columna AS c FROM mytable ORDER BY c;
+</pre>
+<p>ORDER BY can order the values using string or integer comparison.</p>
+<pre>
+SELECT columna AS c FROM mytable ORDER BY c AS STRING;
+SELECT columna AS c FROM mytable ORDER BY c AS INT;
+</pre>
+<p>Where neither is specified, STRING is the default behaviour.</p>
+
+<p>The LIMIT clause can be used to constrain the number of rows returned by the SELECT statement. LIMIT takes one or two numeric arguments.</p>
+<p>With two arguments, the first argument specifies the offset of the first row to return, and the second specifies the maximum number of rows to return.</p>
+<pre>
+SELECT * FROM table LIMIT 2,10;
+</pre>
+<p>Will return 10 rows, starting from the 3rd row. To retrieve all rows from a certain offset up to the end of the result set, you can use -1 for the second parameter.</p>
+<pre>
+SELECT * FROM table LIMIT 95,-1;
+</pre>
+<p>With one argument, the value specifies the number of rows to return from the beginning of the result set, so that offset is 0:</p>
+<pre>
+SELECT * FROM table LIMIT 5;
+SELECT * FROM table LIMIT 0,5;
+</pre>
+<p>These queries are equivalent and will return the same results.</p>
+
+<p><span class="key">file_name</span> should be a string containing a valid filename, in a writable directory.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-load">
+		<header>LOAD DATA</header>
+<pre>
+LOAD DATA INFILE [WITHOUT NAMES | APACHE] '<span class="key">file_name</span>'
+&nbsp;&nbsp;&nbsp;&nbsp;[AS <span class="key">alias</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[INTO TABLE '<span class="key">outfile_name</span>']
+</pre>
+<p>The LOAD DATA INFILE statement reads rows from a text file into a table. <span class="key">file_name</span> must be a string containing a path and file name for an existing csv file.</p>
+<pre>
+LOAD DATA INFILE 'data.csv';
+LOAD DATA INFILE '/home/user/example.csv';
+</pre>
+<p>An <span class="key">alias</span> may be specified for a table using the AS keyword:</p>
+<pre>
+LOAD DATA INFILE 'data.csv' AS data;
+</pre>
+<p>The table may then be referenced as <span class="key">alias</span> in queries.</p>
+<p>By default csvDB will read the first line of the file as the column names, stripping any non-numeric characters. If WITHOUT NAMES is specified when loading all lines will be loaded as table rows, and csvDB will build a set of column names to suit.</p>
+<pre>
+LOAD DATA INFILE WITHOUT NAMES 'data.csv' AS data;
+</pre>
+<p>The APACHE keyword is used to specify that the file is an Apache web server log file, csvDB will load the file and automatically assign column names based on the file's format.</p>
+<pre>
+LOAD DATA INFILE APACHE /var/log/apache2/access.log
+</pre>
+<p><span class="key">outfile_name</span> should be a string containing a valid filename, in a writable directory, this will effectively copy the data into the new file, then load that file.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-drop">
+		<header>DROP</header>
+<pre>
+DROP [TEMPORARY | PERMANENT] TABLE [IF EXISTS]
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">tbl_name</span>
+</pre>
+<p>DROP TABLE will unload a table from the current csvDB session.</p>
+<p>The PERMANENT keyword will also delete the table's file from the file system. The file will only be deleted from the file system if the table is successfully unloaded first.</p>
+<p>The TEMPORARY keyword will only unload the table, without deleting it from the filesystem, this is the default behaviour if neither keyword is specified.</p>
+<pre>
+DROP TABLE table;
+</pre>
+<p>The IF EXISTS clause will prevent an error occuring if the table is not currently loaded. The table must still be loaded for PERMANENT to take effect, IF EXISTS does not effect the behaviour.</p>
+<p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-show">
+		<header>SHOW</header>
+<pre>
+SHOW TABLES
+&nbsp;&nbsp;&nbsp;&nbsp;[LIKE '<span class="key">pattern</span>']
+</pre>
+<p>SHOW TABLES lists tables loaded in the current csvDB session, and any aliases set for those tables.</p>
+<p>The LIKE clause, if present, will result in only tables matching <span class="key">pattern</span> being listed.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-describe">
+		<header>DESCRIBE</header>
+<pre>
+SHOW COLUMNS FROM  <span class="key">tbl_name</span>
+{DESCRIBE | DESC} <span class="key">tbl_name</span>
+</pre>
+<p>SHOW COLUMNS FROM lists columns in a table.</p>
+<p>DESCRIBE is a shortcut for SHOW COLUMNS FROM.</p>
+<p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-update">
+		<header>UPDATE</header>
+<pre>
+UPDATE [IGNORE] <span class="key">table_reference</span>
+&nbsp;&nbsp;&nbsp;&nbsp;SET col_name1=<span class="key">expr1</span> [, col_name2=<span class="key">expr2</span>] ...
+&nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[ORDER BY ...]
+&nbsp;&nbsp;&nbsp;&nbsp;[LIMIT <span class="key">row_count</span>]
+</pre>
+<p>The UPDATE statement updates columns of existing rows in the named table with new values. The SET clause indicates which columns to modify and the values they should be given. Each value can be given as an expression.</p>
+<p>The IGNORE keyword currently has no effect.</p>
+<p><span class="key">table_reference</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p><span class="key">col_name*</span> can be the column's name, or a position reference using COLUMN(<span class="key">num</span>) where <span class="key">num</span> is a numeric value indicating the position of the column in the table.</p>
+<p>The WHERE clause, if given, specifies the conditions that identify which rows to update. With no WHERE clause, all rows are updated.</p>
+<p>If the ORDER BY clause is specified, the rows are updated in the order that is specified.</p>
+<p>The LIMIT clause places a limit on the number of rows that can be updated.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-insert">
+		<header>INSERT</header>
+<pre>
+INSERT [IGNORE]
+&nbsp;&nbsp;&nbsp;&nbsp;[INTO] tbl_name (<span class="key">col_name</span>,<span class="key">...</span>)
+&nbsp;&nbsp;&nbsp;&nbsp;{VALUES | VALUE} ({<span class="key">value</span>},<span class="key">...</span>),(<span class="key">...</span>),<span class="key">...</span>
+</pre>
+<p>INSERT inserts new rows into an existing table.</p>
+<p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p><span class="key">col_name</span> can be the column's name, or a position reference using COLUMN(<span class="key">num</span>) where <span class="key">num</span> is a numeric value indicating the position of the column in the table.</p>
+<p>Where not all column <span class="key">values</span> are explicitly set, the column will be set to '' (empty string).</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-create">
+		<header>CREATE</header>
+<pre>
+CREATE [TEMPORARY] TABLE [IF NOT EXISTS] <span class="key">tbl_name</span>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="key">create_definition</span>,<span class="key">...</span>)
+</pre>
+<p>CREATE TABLE creates a table with the name <span class="key">tbl_name</span>.</p>
+<p>The TEMPORARY keyword currently has no effect.</p>
+<p><span class="key">tbl_name</span> must be a unique identifier or file name, if IF NOT EXISTS is specified, and a table named <span class="key">tbl_name</span> no error will be generated.</p>
+<p><span class="key">create_definition</span> should be a column name, csvDB does not use datatypes and will ignore any datatype keywords, datatype keywords will not however cause an error.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-delete">
+		<header>DELETE</header>
+<pre>
+DELETE [IGNORE] FROM <span class="key">tbl_name</span>
+&nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[ORDER BY <span class="key">...</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;[LIMIT <span class="key">row_count</span>]
+</pre></p>
+<p>The DELETE statement deletes rows from <span class="key">tbl_name</span> and returns a count of the number of deleted rows.</p>
+<p>The IGNORE keyword currently has no effect.</p>
+<p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p>The WHERE clause, if given, specifies the conditions that identify which rows to delete. With no WHERE clause, all rows are deleted.</p>
+<p>If the ORDER BY clause is specified, the rows are deleted in the order that is specified.</p>
+<p>The LIMIT clause places a limit on the number of rows that can be deleted.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section class="footer">Copyright &copy; 2011 Lisa Milne<br />This document is licensed under The <a href="http://www.gnu.org/licenses/fdl.html" target="_blank">GNU Free Documentation License</a>.</section>
+</body>
+</html>

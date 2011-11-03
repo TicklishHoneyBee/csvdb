@@ -1,0 +1,54 @@
+========================================================================
+                              README
+========================================================================
+
+ABOUT:
+csvdb is an SQL engine for csv (comma separated values) files, allowing
+ files to be searched as if they were database tables
+
+DEPENDENCIES:
+csvdb requires the standard C and POSIX libraries. It has been tested
+ with glibc and may work with other C libraries, but this has not been
+ tested.
+
+INSTALL:
+If you're reading this then you've already unpacked the tarball,
+so it's the usual 4 steps:
+1) cd /path/to/csvdb
+2) make
+3) su -
+4) make install
+
+UNINSTALL:
+just cd to the csvdb directory and run "make uninstall"
+
+USE:
+csvdb [-f <file>] [-a <file>] [-n <alias>] [-e <query>]
+	If no -e query is given on the command line, the csvdb
+	 interactive shell will open
+	See http://sandbox.ltmnet.com/csvdb-doc.html or `man csvdb'
+	 for details on the sql currently supported by csvdb
+
+LICENSE:
+csvdb is licensed under the GPLv3, there's a copy of it in LICENSE
+
+DEVELOPMENT:
+I might do more to it, if so I'll let everyone know through
+ sandbox.ltmnet.com/csvdb
+If you make any changes, let me know: lisa@ltmnet.com
+
+CHANGES:
+0.1
+	- initial release
+0.2
+	- bugfix to arrow key handling in shell
+	- added support for loading apache log file with APACHE keyword
+	- added INSERT
+	- added UPDATE
+	- added CREATE TABLE
+	- added OUTFILE support
+	- bugfix in WHERE parsing
+	- added some query optimisation
+0.2.1
+	- bugfix in file loading
+	- added DELETE

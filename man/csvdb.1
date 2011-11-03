@@ -1,0 +1,76 @@
+.TH CSVDB "1" "October 2011"
+.SH NAME
+csvdb \- sql engine for csv files
+.SH "SYNOPSIS"
+.PP
+\fBcsvdb\fR [\fB\-f <file>\fP] [\fB\-a <file>\fP] [\fB\-n <alias>\fP] [\fB\-e <query>\fP]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B csvdb
+command.
+.PP
+csvdb is an SQL engine for csv (comma separated values) files, allowing
+files to be searched as if they were database tables.
+.br
+.TP
+\fB\-f <file>\fP
+Load \fB<file>\fP as a table. Multiple \fB\-f\fP arguments can be used to
+include multiple files
+.TP
+\fB\-a <file>\fP
+Load Apache log file \fB<file>\fP as a table. Multiple \fB\-a\fP arguments can be used to
+include multiple files
+.TP
+\fB\-n <alias>\fP
+Set \fB<alias>\fP as a name alias for the previous file loaded with
+\fB\-f\fP or \fB\-a\fP
+.TP
+\fB\-e <query>\fP
+Execute \fB<query>\fP
+.PP
+.SH EXAMPLES
+.TP
+csvdb -f test.csv -e "DESCRIBE FILE"
+Load test.csv and describe (list) it's columns
+.TP
+csvdb -f test.csv -n test
+Load test.csv with alias test, and start the csvdb shell
+.TP
+csvdb -f test.csv -f /home/user/example.csv
+Load test.csv and /home/user/example.csv, and start the csvdb shell
+.TP
+csvdb
+.br
+Start the csvdb shell
+.SH SUPPORTED QUERIES
+.TP
+SELECT
+    [ALL | DISTINCT ]
+    select_expr [, select_expr ...]
+    [FROM {table_reference | file_reference}
+    [WHERE where_condition]
+    [GROUP BY {col_name | expr | COLUMN(id)} [, ... ]]
+    [ORDER BY {col_name | expr | COLUMN(id)}
+      [ASC | DESC], ...]
+    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+    [INTO OUTFILE 'file_name']
+.TP
+DROP [TEMPORARY | PERMANENT] TABLE [IF EXISTS]
+    tbl_name
+.TP
+{DESCRIBE | DESC} tbl_name
+.TP
+LOAD DATA INFILE [WITHOUT NAMES | APACHE] 'file_name'
+    [AS alias]
+    [INTO TABLE 'file_name']
+.TP
+SHOW TABLES
+    [LIKE 'pattern']
+.SH AUTHOR
+Written by Lisa Milne.
+.SH COPYRIGHT
+Copyright 2011 Lisa Milne <lisa@ltmnet.com>.  License GPLv3+: GNU GPL
+version 3 or later <http://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
