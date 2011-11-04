@@ -25,12 +25,7 @@ AM_INIT_AUTOMAKE([foreign])
 AC_PROG_CC
 AC_PROG_RANLIB
 
-## override autoconf's idea of CFLAGS
-if test -n "${ac_cv_env_CFLAGS_value}"; then
-	CFLAGS="${ac_cv_env_CFLAGS_value}"
-else
-	CFLAGS="-Wall -g -I. -ansi -pedantic"
-fi
+CFLAGS="${CFLAGS} -Wall -ansi -pedantic"
 
 AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [
