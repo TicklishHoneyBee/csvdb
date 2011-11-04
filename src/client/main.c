@@ -205,10 +205,10 @@ interact_rdln(void)
 
 	while ((line = csvdb_readline(d))) {
 		/* check for special commands */
-		if (memcmp(line, cmd_quit, charcnt(cmd_quit)) == 0) {
+		if (!strncasecmp(line, cmd_quit, charcnt(cmd_quit))) {
 			free(line);
 			break;
-		} else if (memcmp(line, cmd_delim, charcnt(cmd_delim)) == 0) {
+		} else if (!strncasecmp(line, cmd_delim, charcnt(cmd_delim))) {
 			/* next non whitespace char will be the new delim */
 			static const char ws[] = " \t";
 			size_t off = strcspn(line + charcnt(cmd_delim), ws);
