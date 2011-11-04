@@ -23,6 +23,21 @@
 #include "csvdb-client.h"
 
 
+/* interactive handlers */
+static const char banner[] = "\
+csvDB shell\r\n\
+Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>\r\n\
+This program is free software: you can redistribute it and/or modify it\r\n\
+under the terms of the GNU General Public License as published by the\r\n\
+Free Software Foundation, either version 3 of the License, or\r\n\
+(at your option) any later version.\r\n\
+\r\n";
+static const char discl[] = "\
+This program is distributed in the hope that it will be useful, but\r\n\
+WITHOUT ANY WARRANTY; without even the implied warranty of\r\n\
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\r\n\
+See the GNU General Public License for more details.\r\n";
+
 static void
 interact_orig(char *buff)
 {
@@ -31,28 +46,16 @@ interact_orig(char *buff)
 	char d = ';';
 	int o = 0;
 	int is = 0;
-	char* pre;
 	int eq = 0;
 	char* b;
 	char sbuff[64];
 	int i;
 
 	history_load();
-	pre = "csvDB shell\r\n"
-		"Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>\r\n"
-		"This program is free software: you can redistribute it and/or modify it\r\n"
-		"under the terms of the GNU General Public License as published by the\r\n"
-		"Free Software Foundation, either version 3 of the License, or\r\n"
-		"(at your option) any later version.\r\n"
-		"\r\n";
 	set_tty_raw();
-	write(STDOUT_FILENO,pre,strlen(pre));
-	pre = "This program is distributed in the hope that it will be useful, but\r\n"
-		"WITHOUT ANY WARRANTY; without even the implied warranty of\r\n"
-		"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\r\n"
-		"See the GNU General Public License for more details.\r\n"
-		"csvDB> ";
-	write(STDOUT_FILENO,pre,strlen(pre));
+	write(STDOUT_FILENO,banner,sizeof(banner) - 1);
+	write(STDOUT_FILENO,discl,sizeof(discl) - 1);
+	write(STDOUT_FILENO,csvdb_prompt,strlen(csvdb_prompt));
 
 	while ((c = getch()) != 0x04) {
 		if (c == '\'' && (!o || buff[o-1] != '\\'))
@@ -186,6 +189,11 @@ interact_rdln(void)
 	char *line;
 
 	csvdb_init_readline();
+
+	/* print some banners, then go interactive */
+	write(STDOUT_FILENO, banner, sizeof(banner) - 1);
+	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
+
 	while ((line = csvdb_readline())) {
 		free(line);
 	}
