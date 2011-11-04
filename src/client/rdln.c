@@ -156,24 +156,23 @@ char*
 csvdb_readline(char delim)
 {
 	static char alt_prompt[] = " > ";
-	const char *prompt = csvdb_prompt;
 	char *stmt = NULL;
 	size_t slen = 0UL;
 	char *line;
 
 	alt_prompt[0] = delim;
-	while ((line = readline(prompt)) == NULL ||
-	       strchr(line, delim) == NULL) {
+	for (line = readline(csvdb_prompt);
+	     line && strchr(line, delim) == NULL;
+	     line = readline(alt_prompt))  {
 		size_t llen = strlen(line);
 
 		/* append to statement and prompt for next line */
 		stmt = realloc(stmt, slen + llen + 1);
 		memcpy(stmt + slen, line, llen + 1);
 		slen += llen;
-		prompt = alt_prompt;
 	}
 
-	if (stmt && !(stmt[0] == '\0' || stmt[0] == ' ')) {
+	if ((stmt || (stmt = line)) && !(stmt[0] == '\0' || stmt[0] == ' ')) {
 		/* lest we lose our precious lines */
 		add_history(stmt);
 	}
