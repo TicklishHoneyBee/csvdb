@@ -15,8 +15,12 @@ csvdb_LDADD =
 csvdb_SOURCES += client/main.c
 csvdb_SOURCES += client/history.c
 csvdb_SOURCES += client/tty.c
+csvdb_SOURCES += client/rdln.c
 csvdb_CPPFLAGS += -I$(topinc)
 csvdb_LDADD += libcsvdb.a
+if USE_READLINE
+csvdb_LDADD += -lreadline
+endif
 
 libcsvdb_a_SOURCES =
 libcsvdb_a_CPPFLAGS =
