@@ -99,7 +99,9 @@ __reset_rdln(int sig)
 	rl_delete_text(0, rl_end);
 	putc('\n', stdout);
 	rl_on_new_line();
-	rl_point = 0;
+	rl_line_buffer[0] = '\0';
+	rl_point = rl_end = 0;
+	rl_done = 0;
 	rl_forced_update_display();
 	/* put ourselves on the signal stack again */
 	signal(SIGINT, __reset_rdln);
