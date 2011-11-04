@@ -42,11 +42,12 @@ AS_IF([test "x${with_readline}" != "xno"], [dnl
 	AC_CHECK_LIB([readline], [main], [dnl
 		AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
 		AC_DEFINE([HAVE_LIBREADLINE], [1], [Define for libreadline])
+		AC_DEFINE([USE_READLINE], [1], [Define to use readline])
 	], [
 		## in case something goes wrong
 		:
 	], [-lncurses])])
-
+AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
