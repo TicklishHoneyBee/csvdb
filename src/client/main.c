@@ -154,8 +154,10 @@ interact_orig(char *buff)
 						break;
 					write(STDOUT_FILENO,"\r\n",2);
 					if (o) {
+						set_tty_cooked();
 						r = csvdb_query(buff);
 						csvdb_print_result(r);
+						set_tty_raw();
 						result_free(r);
 						history_add(buff);
 						o = 0;
