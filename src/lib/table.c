@@ -246,7 +246,7 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	r = 1;
 	fl = 0;
 	fp = 0;
-	while (r == 1) {
+	while (r > 0) {
 		if (fp == fl) {
 			r = fread(fbuff,1,2048,f);
 			fl = r;
