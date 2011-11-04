@@ -38,6 +38,7 @@ WITHOUT ANY WARRANTY; without even the implied warranty of\r\n\
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\r\n\
 See the GNU General Public License for more details.\r\n";
 
+#if !defined USE_READLINE
 static void
 interact_orig(char *buff)
 {
@@ -183,6 +184,8 @@ interact_orig(char *buff)
 	return;
 }
 
+#else  /* USE_READLINE */
+
 static void
 interact_rdln(void)
 {
@@ -200,6 +203,7 @@ interact_rdln(void)
 	csvdb_deinit_readline();
 	return;
 }
+#endif	/* !USE_READLINE */
 
 
 int main(int argc, char** argv)
