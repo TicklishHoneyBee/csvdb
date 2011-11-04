@@ -49,6 +49,6 @@ extern void csvdb_deinit_readline(void);
 
 /**
  * Read a line of input. */
-extern char *csvdb_readline(void);
+extern char *csvdb_readline(char delim);
 
 #endif

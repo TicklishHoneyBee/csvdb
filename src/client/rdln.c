@@ -148,16 +148,34 @@ csvdb_deinit_readline(void)
 	return;
 }
 
+
+/* line-reading beef */
 char*
-csvdb_readline(void)
+csvdb_readline(char delim)
 {
-	char *line = readline(csvdb_prompt);
+	static char alt_prompt[] = " > ";
+	const char *prompt = csvdb_prompt;
+	char *stmt = NULL;
+	size_t slen = 0UL;
+	char *line;
 
-	if (line && !(line[0] == '\0' || line[0] == ' ')) {
-		/* lest we lose our precious lines */
-		add_history(line);
+	alt_prompt[0] = delim;
+	while ((line = readline(prompt)) == NULL ||
+	       strchr(line, delim) == NULL) {
+		size_t llen = strlen(line);
+
+		/* append to statement and prompt for next line */
+		stmt = realloc(stmt, slen + llen + 1);
+		memcpy(stmt + slen, line, llen + 1);
+		slen += llen;
+		prompt = alt_prompt;
 	}
-	return line;
+
+	if (stmt && !(stmt[0] == '\0' || stmt[0] == ' ')) {
+		/* lest we lose our precious lines */
+		add_history(stmt);
+	}
+	return stmt;
 }
 #endif	/* USE_READLINE */
 

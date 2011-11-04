@@ -194,8 +194,8 @@ static const char cmd_delim[] = "DELIMITER";
 static void
 interact_rdln(void)
 {
-	char *line;
 	char d = ';';
+	char *line;
 
 	csvdb_init_readline();
 
@@ -203,9 +203,7 @@ interact_rdln(void)
 	write(STDOUT_FILENO, banner, sizeof(banner) - 1);
 	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
 
-	while ((line = csvdb_readline())) {
-		char *eol;
-
+	while ((line = csvdb_readline(d))) {
 		/* check for special commands */
 		if (memcmp(line, cmd_quit, charcnt(cmd_quit)) == 0) {
 			free(line);
@@ -215,16 +213,12 @@ interact_rdln(void)
 			static const char ws[] = " \t";
 			size_t off = strcspn(line + charcnt(cmd_delim), ws);
 			d = line[charcnt(cmd_delim) + off];
-		} else if ((eol = strchr(line, d))) {
+		} else {
 			result_t *r;
 
-			*eol = '\0';
 			r = csvdb_query(line);
 			csvdb_print_result(r);
 			result_free(r);
-		} else {
-			/* delimiter not found, read on */
-			;
 		}
 		free(line);
 	}
