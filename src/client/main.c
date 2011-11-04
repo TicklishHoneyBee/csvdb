@@ -22,6 +22,9 @@
 /* our stuff */
 #include "csvdb-client.h"
 
+#define countof(x)	(sizeof(x) / sizeof(*x))
+#define charcnt(x)	(countof(x) - 1)
+
 
 /* interactive handlers */
 static const char banner[] = "\
@@ -185,11 +188,14 @@ interact_orig(char *buff)
 }
 
 #else  /* USE_READLINE */
+static const char cmd_quit[] = "QUIT";
+static const char cmd_delim[] = "DELIMITER";
 
 static void
 interact_rdln(void)
 {
 	char *line;
+	char d = ';';
 
 	csvdb_init_readline();
 
@@ -198,6 +204,28 @@ interact_rdln(void)
 	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
 
 	while ((line = csvdb_readline())) {
+		char *eol;
+
+		/* check for special commands */
+		if (memcmp(line, cmd_quit, charcnt(cmd_quit)) == 0) {
+			free(line);
+			break;
+		} else if (memcmp(line, cmd_delim, charcnt(cmd_delim)) == 0) {
+			/* next non whitespace char will be the new delim */
+			static const char ws[] = " \t";
+			size_t off = strcspn(line + charcnt(cmd_delim), ws);
+			d = line[charcnt(cmd_delim) + off];
+		} else if ((eol = strchr(line, d))) {
+			result_t *r;
+
+			*eol = '\0';
+			r = csvdb_query(line);
+			csvdb_print_result(r);
+			result_free(r);
+		} else {
+			/* delimiter not found, read on */
+			;
+		}
 		free(line);
 	}
 	csvdb_deinit_readline();
