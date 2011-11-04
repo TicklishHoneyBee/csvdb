@@ -24,6 +24,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <stdio.h>
+# include <signal.h>
 # include <readline/readline.h>
 # include <readline/history.h>
 #endif	/* USE_READLINE */
@@ -92,16 +93,32 @@ get_histfile_name(const char *tmpl)
 	return res;
 }
 
+static void
+__reset_rdln(int sig)
+{
+	rl_delete_text(0, rl_end);
+	putc('\n', stdout);
+	rl_on_new_line();
+	rl_point = 0;
+	rl_forced_update_display();
+	/* put ourselves on the signal stack again */
+	signal(SIGINT, __reset_rdln);
+	return;
+}
+
 void
 csvdb_init_readline(void)
 {
 	static char wbc[] = "\t\n@$<>=;|&{( ";
 
+	/* basic initialisation */
 	rl_initialize();
 	rl_readline_name = "csvdb";
 	rl_attempted_completion_function = csvdb_comp;
-
 	rl_basic_word_break_characters = wbc;
+
+	/* signal handling */
+	signal(SIGINT, __reset_rdln);
 	rl_catch_signals = 0;
 
 	/* load history */
@@ -118,6 +135,9 @@ csvdb_init_readline(void)
 void
 csvdb_deinit_readline(void)
 {
+	/* signal unhandling */
+	signal(SIGINT, SIG_DFL);
+
 	/* print newline */
 	putc('\n', stdout);
 	/* save the history file and free resources*/
