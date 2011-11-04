@@ -12,6 +12,7 @@ missing
 src/config.h.in
 *~
 build*
+=build*
 depcomp
 Makefile
 config.log
