@@ -25,12 +25,7 @@ AM_INIT_AUTOMAKE([foreign])
 AC_PROG_CC
 AC_PROG_RANLIB
 
-## override autoconf's idea of CFLAGS
-if test -n "${ac_cv_env_CFLAGS_value}"; then
-	CFLAGS="${ac_cv_env_CFLAGS_value}"
-else
-	CFLAGS="-Wall -g -I. -ansi -pedantic"
-fi
+CFLAGS="${CFLAGS} -Wall -ansi -pedantic"
 
 AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [
@@ -42,11 +37,12 @@ AS_IF([test "x${with_readline}" != "xno"], [dnl
 	AC_CHECK_LIB([readline], [main], [dnl
 		AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
 		AC_DEFINE([HAVE_LIBREADLINE], [1], [Define for libreadline])
+		AC_DEFINE([USE_READLINE], [1], [Define to use readline])
 	], [
 		## in case something goes wrong
 		:
 	], [-lncurses])])
-
+AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])
