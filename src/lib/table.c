@@ -201,6 +201,7 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 {
 	FILE *f;
 	char c;
+	char fbuff[2048];
 	char buff[1024];
 	char kbuff[20];
 	int key;
@@ -208,6 +209,8 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	int l;
 	int s;
 	int se;
+	int fl;
+	int fp;
 	size_t r;
 	int cc = 0;
 	int ccc;
@@ -241,10 +244,17 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	s = 0;
 	se = 0;
 	r = 1;
+	fl = 0;
+	fp = 0;
 	while (r == 1) {
-		r = fread(&c,1,1,f);
-		if (r != 1)
+		if (fp == fl) {
+			r = fread(fbuff,1,2048,f);
+			fl = r;
+			fp = 0;
+		}
+		if (r < 1)
 			goto column_end;
+		c = fbuff[fp++];
 		if (s) {
 			if (c == '"') {
 				if (b && buff[b-1] == '\\') {
