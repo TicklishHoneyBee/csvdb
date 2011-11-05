@@ -25,13 +25,13 @@ AM_INIT_AUTOMAKE([foreign])
 AC_PROG_CC
 AC_PROG_RANLIB
 
-CFLAGS="${CFLAGS} -Wall -ansi -pedantic"
+CFLAGS="${CFLAGS} -Wall -ansi -pedantic -D_GNU_SOURCE"
 
 AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [
 enable experimental support for readline
 ])], [with_readline="${withval}"], [with_readline="no"])
-          
+
 READLINE_LIBS=
 AS_IF([test "x${with_readline}" != "xno"], [dnl
 	AC_CHECK_LIB([readline], [main], [dnl

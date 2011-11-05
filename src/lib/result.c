@@ -34,7 +34,7 @@ void result_where(result_t *r)
 			lim = -1;
 		}else if (r->order) {
 			lim = -1;
-		}else if (strncasecmp(r->q,"SELECT * FROM ",14)) {
+		}else if (strncasecmp(r->q,"SELECT ",7)) {
 			lim = -1;
 		}else if (r->count) {
 			lim = -1;

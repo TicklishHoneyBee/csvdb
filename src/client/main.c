@@ -195,12 +195,13 @@ static void interact_rdln(void)
 {
 	char d = ';';
 	char *line;
+	size_t i;
 
 	csvdb_init_readline();
 
 	/* print some banners, then go interactive */
-	write(STDOUT_FILENO, banner, sizeof(banner) - 1);
-	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
+	i = write(STDOUT_FILENO, banner, sizeof(banner) - 1);
+	i = write(STDOUT_FILENO, discl, sizeof(discl) - 1);
 
 	while ((line = csvdb_readline(d))) {
 		/* check for special commands */

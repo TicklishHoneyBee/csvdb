@@ -54,7 +54,7 @@ int table_next_key(table_t *t)
 table_t *table_load_apache(char* file)
 {
 	FILE *f;
-	char c;
+	char c = ' ';
 	char* p;
 	char fbuff[2048];
 	char buff[1024];
@@ -70,7 +70,7 @@ table_t *table_load_apache(char* file)
 	int fl;
 	int fp;
 	nvp_t *n;
-	nvp_t *row;
+	nvp_t *row = NULL;
 	nvp_t **att;
 	table_t *t = table_find(file);
 
@@ -202,7 +202,7 @@ column_end:
 table_t *table_load_csv(char* file, nvp_t *cols)
 {
 	FILE *f;
-	char c;
+	char c = ' ';
 	char fbuff[2048];
 	char buff[1024];
 	char kbuff[20];
@@ -215,9 +215,9 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	int fp;
 	size_t r;
 	int cc = 0;
-	int ccc;
+	int ccc = 0;
 	nvp_t *n;
-	nvp_t *row;
+	nvp_t *row = NULL;
 	table_t *t = table_find(file);
 
 	if (t)
