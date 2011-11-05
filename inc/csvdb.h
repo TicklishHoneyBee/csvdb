@@ -14,6 +14,7 @@
 typedef struct nvp_s {
 	char* name;
 	char* value;
+	int num;
 	struct nvp_s *child;
 	struct nvp_s *prev;
 	struct nvp_s *next;

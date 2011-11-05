@@ -127,7 +127,6 @@ void result_group(result_t *r)
 	int j;
 	int k;
 	char buff[1024];
-	char buff2[1024];
 	char sbuff[64];
 	nvp_t *l;
 	nvp_t *u;
@@ -154,15 +153,15 @@ void result_group(result_t *r)
 				b = &l->child;
 				if (l->child && !strcasecmp(l->child->value,"AS"))
 					b = &l->child->next->next;
-				sprintf(buff2,"%s-%s",n->value,buff);
-				t = nvp_search_name(*b,buff2);
+				t = nvp_search_name(*b,n->value);
 				if (t) {
 					j = atoi(t->value);
 					j++;
 					sprintf(sbuff,"%d",j);
-					nvp_set(t,buff2,sbuff);
+					nvp_set(t,n->value,sbuff);
 				}else{
-					nvp_add(b,buff2,"1");
+					t = nvp_add(b,n->value,"1");
+					t->num = q->key;
 				}
 				l = l->next;
 			}
@@ -337,7 +336,7 @@ void result_cols(result_t *r)
 			t = nvp_grabi(n->data,k);
 			if (t) {
 				nvp_add(&u,NULL,t->value);
-			}else if (k < 0 && (t = nvp_last(n->data))) {
+			}else if (k < 0 && r->count && (t = nvp_last(n->data))) {
 				nvp_add(&u,NULL,t->value);
 			}else{
 				nvp_add(&u,NULL,"NULL");
@@ -354,12 +353,11 @@ void result_count(result_t *r)
 	int j;
 	int k;
 	char buff[1024];
-	char* c;
-	char* c1;
 	nvp_t *l;
 	nvp_t *q;
 	row_t *t;
 	nvp_t *u;
+	nvp_t *b;
 	if (r->count && strlen(r->count->value)) {
 		j = row_count(r->result);
 		if (!r->group) {
@@ -384,42 +382,35 @@ void result_count(result_t *r)
 		}else{
 			q = r->count;
 			while (q) {
-				u = q->child;
-				if (u && !strcasecmp(u->value,"AS"))
-					u = u->next->next;
-				/* <group_by_column>-<group_column_value> */
-				while (u) {
-					c = strchr(u->name,'-');
-					if (!c) {
-						printf("internal error on group by counts '%s'\n",u->name);
-						row_free_all(r->result);
-						r->result = NULL;
-						return;
-					}
-					*c = 0;
-					c1 = c+1;
-					if (is_numeric(u->name)) {
-						k = atoi(u->name);
-					}else{
-						k = nvp_searchi(r->cols,u->name);
-					}
-					t = r->result;
-					while (t) {
-						l = nvp_grabi(t->data,k);
-						if (!l) {
-							if (!strcmp(c1,"NULL")) {
+				t = r->result;
+				b = q->child;
+				if (b && !strcasecmp(b->value,"AS"))
+					b = b->next->next;
+				if (!b) {
+					q = q->next;
+					continue;
+				}
+				while (t) {
+					u = b;
+					while (u) {
+						if (t->key == u->num) {
+							if (is_numeric(u->name)) {
+								k = atoi(u->name);
+							}else{
+								k = nvp_searchi(r->table->columns,u->name);
+							}
+							l = nvp_grabi(t->data,k);
+							if (!l) {
 								nvp_add(&t->data,NULL,u->value);
 								break;
-							}
-						}else{
-							if (!strcmp(l->value,c1)) {
+							}else{
 								nvp_add(&t->data,NULL,u->value);
 								break;
 							}
 						}
-						t = t->next;
+						u = u->next;
 					}
-					u = u->next;
+					t = t->next;
 				}
 				if (q->child && !strcasecmp(q->child->value,"AS")) {
 					nvp_add(&r->cols,NULL,q->child->next->value);
