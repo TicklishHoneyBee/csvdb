@@ -292,16 +292,17 @@ column_end:
 			if (!cols && !l) {
 				nvp_add(&t->columns,NULL,buff);
 				cc++;
-			}else if (!ccc) {
-				if (!b && fp == fl)
-					break;
-				rw = row_add(att,key);
-				att = &rw;
-				row = &rw->data;
+			}else{
+				if (!ccc) {
+					if (!b && fp == fl)
+						break;
+					rw = row_add(att,key);
+					att = &rw;
+					row = &rw->data;
+				}
+				nvp_add(row,NULL,buff);
+				ccc++;
 			}
-
-			nvp_add(row,NULL,buff);
-			ccc++;
 
 			if (c == '\n') {
 				l++;

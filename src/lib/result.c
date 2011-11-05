@@ -337,6 +337,8 @@ void result_cols(result_t *r)
 			t = nvp_grabi(n->data,k);
 			if (t) {
 				nvp_add(&u,NULL,t->value);
+			}else if (k < 0 && (t = nvp_last(n->data))) {
+				nvp_add(&u,NULL,t->value);
 			}else{
 				nvp_add(&u,NULL,"NULL");
 			}
