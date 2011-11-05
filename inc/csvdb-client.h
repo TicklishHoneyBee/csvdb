@@ -26,29 +26,4 @@ int set_tty_raw(void);
 int set_tty_cooked(void);
 unsigned char getch(void);
 
-/**
- * Global prompt string, cannot be customised at the moment.
- * defined in main.c */
-extern char *csvdb_prompt;
-
-/**
- * Global histfile string, cannot be customised at the moment.
- * defined in history.c */
-extern char *csvdb_histfile;
-
-/* default template */
-#define CSVDB_HISTFILE	".csvdb_history"
-
-/**
- * Initialise readline resources. */
-extern void csvdb_init_readline(void);
-
-/**
- * Deinitialise readline resources. */
-extern void csvdb_deinit_readline(void);
-
-/**
- * Read a line of input. */
-extern char *csvdb_readline(char delim);
-
 #endif
