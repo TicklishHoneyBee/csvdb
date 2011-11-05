@@ -620,8 +620,7 @@ void sql_select(result_t *r)
 		result_group(r);
 	if (r->order)
 		result_order(r);
-	if (strncasecmp(r->q,"SELECT * FROM ",14))
-		result_cols(r);
+	result_cols(r);
 	if (r->count)
 		result_count(r);
 	if (atoi(r->limit->value) > 0 || atoi(r->limit->next->value) > -1)

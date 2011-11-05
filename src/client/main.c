@@ -25,7 +25,6 @@
 #define countof(x)	(sizeof(x) / sizeof(*x))
 #define charcnt(x)	(countof(x) - 1)
 
-
 /* interactive handlers */
 static const char banner[] = "\
 csvDB shell\r\n\
@@ -42,8 +41,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\r\n\
 See the GNU General Public License for more details.\r\n";
 
 #if !defined USE_READLINE
-static void
-interact_orig(char *buff)
+static void interact_orig(char *buff)
 {
 	result_t *r;
 	char c;
@@ -193,8 +191,7 @@ interact_orig(char *buff)
 static const char cmd_quit[] = "QUIT";
 static const char cmd_delim[] = "DELIMITER";
 
-static void
-interact_rdln(void)
+static void interact_rdln(void)
 {
 	char d = ';';
 	char *line;
@@ -229,7 +226,7 @@ interact_rdln(void)
 }
 #endif	/* !USE_READLINE */
 
-
+
 int main(int argc, char** argv)
 {
 	result_t *r;

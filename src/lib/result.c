@@ -34,7 +34,7 @@ void result_where(result_t *r)
 			lim = -1;
 		}else if (r->order) {
 			lim = -1;
-		}else if (strncasecmp(r->q,"SELECT ",7)) {
+		}else if (strncasecmp(r->q,"SELECT * FROM ",14)) {
 			lim = -1;
 		}else if (r->count) {
 			lim = -1;
@@ -382,15 +382,15 @@ void result_cols(result_t *r)
 			}
 			if (t) {
 				if (u) {
-					nvp_add(&u->child,t->name,t->value);
+					nvp_add(&u->child,NULL,t->value);
 				}else{
-					u = nvp_create(t->name,t->value);
+					u = nvp_create(NULL,t->value);
 				}
 			}else{
 				if (u) {
 					nvp_add(&u->child,n->name,"NULL");
 				}else{
-					u = nvp_create(n->name,"NULL");
+					u = nvp_create(NULL,"NULL");
 				}
 			}
 			q = q->next;

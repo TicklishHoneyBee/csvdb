@@ -46,8 +46,7 @@ char *csvdb_histfile = NULL;
 /* this is pretty non-functional if USE_READLINE hasn't been set */
 #if defined USE_READLINE
 /* completers */
-static char*
-cmd_generator(const char *UNUSED(text), int UNUSED(state))
+static char* cmd_generator(const char *UNUSED(text), int UNUSED(state))
 {
 	/* if no names matched, then return NULL. */
 	return NULL;
@@ -59,8 +58,7 @@ cmd_generator(const char *UNUSED(text), int UNUSED(state))
  * complete.  TEXT is the word to complete.  We can use the entire
  * contents of rl_line_buffer in case we want to do some simple
  * parsing.  Return the array of matches, or NULL if there aren't any. */
-static char**
-csvdb_comp(const char *text, int start, int UNUSED(end))
+static char** csvdb_comp(const char *text, int start, int UNUSED(end))
 {
 	char **matches;
 
@@ -76,9 +74,7 @@ csvdb_comp(const char *text, int start, int UNUSED(end))
 	return matches;
 }
 
-
-static char*
-get_histfile_name(const char *tmpl)
+static char* get_histfile_name(const char *tmpl)
 {
 /* construct a canonical file name from template TMPL */
 	char *h = getenv("HOME");
@@ -93,8 +89,7 @@ get_histfile_name(const char *tmpl)
 	return res;
 }
 
-static void
-__reset_rdln(int sig)
+static void __reset_rdln(int sig)
 {
 	rl_delete_text(0, rl_end);
 	putc('\n', stdout);
@@ -108,8 +103,7 @@ __reset_rdln(int sig)
 	return;
 }
 
-void
-csvdb_init_readline(void)
+void csvdb_init_readline(void)
 {
 	static char wbc[] = "\t\n@$<>=;|&{( ";
 
@@ -134,8 +128,7 @@ csvdb_init_readline(void)
 	return;
 }
 
-void
-csvdb_deinit_readline(void)
+void csvdb_deinit_readline(void)
 {
 	/* signal unhandling */
 	signal(SIGINT, SIG_DFL);
@@ -150,10 +143,8 @@ csvdb_deinit_readline(void)
 	return;
 }
 
-
 /* line-reading beef */
-char*
-csvdb_readline(char delim)
+char* csvdb_readline(char delim)
 {
 	static char alt_prompt[] = " > ";
 	char *stmt = NULL;
@@ -161,9 +152,11 @@ csvdb_readline(char delim)
 	char *line;
 
 	alt_prompt[0] = delim;
-	for (line = readline(csvdb_prompt);
-	     line && strchr(line, delim) == NULL;
-	     line = readline(alt_prompt))  {
+	for (
+		line = readline(csvdb_prompt);
+		line && strchr(line, delim) == NULL;
+		line = readline(alt_prompt)
+	)  {
 		size_t llen = strlen(line);
 
 		/* append to statement and prompt for next line */

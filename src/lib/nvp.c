@@ -67,6 +67,20 @@ void nvp_free_all(nvp_t *n)
 	}
 }
 
+void nvp_free_keys(nvp_t *n)
+{
+	nvp_t *c;
+	while (n) {
+		c = n->next;
+		if (n->name)
+			free(n->name);
+		if (n->value)
+			free(n->value);
+		free(n);
+		n = c;
+	}
+}
+
 nvp_t *nvp_add(nvp_t **stack, char* name, char* value)
 {
 	nvp_t *n = nvp_create(name,value);

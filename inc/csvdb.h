@@ -19,6 +19,13 @@ typedef struct nvp_s {
 	struct nvp_s *next;
 } nvp_t;
 
+typedef struct row_s {
+	int key;
+	nvp_t *data;
+	struct row_s *prev;
+	struct row_s *next;
+} row_t;
+
 typedef struct table_s {
 	int key;
 	nvp_t *name;

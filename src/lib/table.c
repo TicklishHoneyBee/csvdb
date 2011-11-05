@@ -1,5 +1,5 @@
 /************************************************************************
-* csv.c
+* table.c
 * Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>
 *
 * This program is free software: you can redistribute it and/or modify it
@@ -134,6 +134,8 @@ column_end:
 				cc++;
 			}
 			if (!ccc) {
+				if (!b && fp == fl)
+					break;
 				row = nvp_add(att,kbuff,buff);
 				att = &row->next;
 				ccc++;
@@ -284,11 +286,12 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 			}
 column_end:
 			buff[b] = 0;
-			b = 0;
 			if (!cols && !l) {
 				nvp_add(&t->columns,kbuff,buff);
 				cc++;
 			}else if (!ccc) {
+				if (!b && fp == fl)
+					break;
 				row = nvp_add(&t->rows,kbuff,buff);
 				ccc++;
 			}else{
@@ -301,6 +304,7 @@ column_end:
 				key = table_next_key(t);
 				sprintf(kbuff,"%d",key);
 			}
+			b = 0;
 			continue;
 		}
 		if (b < 1023)
