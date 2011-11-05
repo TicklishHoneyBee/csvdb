@@ -97,6 +97,7 @@ column_end:
 void sql_describe(result_t *r)
 {
 	nvp_t *n;
+	row_t *row;
 	nvp_add(&r->cols,NULL,"name");
 	if (!r->keywords->next) {
 		printf("syntax error near '%s': \"%s\"\n",r->keywords->value,r->q);
@@ -114,7 +115,8 @@ void sql_describe(result_t *r)
 
 	n = r->table->columns;
 	while (n) {
-		nvp_add(&r->result,NULL,n->value);
+		row = row_add(&r->result,0);
+		nvp_add(&row->data,NULL,n->value);
 		n = n->next;
 	}
 }
@@ -122,6 +124,7 @@ void sql_describe(result_t *r)
 /* SHOW COLUMNS FROM table */
 void sql_show_columns(result_t *r)
 {
+	row_t *row;
 	nvp_t *n = r->keywords->next;
 	nvp_add(&r->cols,NULL,"name");
 	if (!n->next || strcasecmp(n->next->value,"FROM")) {
@@ -147,7 +150,8 @@ void sql_show_columns(result_t *r)
 
 	n = r->table->columns;
 	while (n) {
-		nvp_add(&r->result,NULL,n->value);
+		row = row_add(&r->result,0);
+		nvp_add(&row->data,NULL,n->value);
 		n = n->next;
 	}
 }
@@ -158,6 +162,7 @@ void sql_show_tables(result_t *r)
 	char buff[1024];
 	int i;
 	nvp_t *l;
+	row_t *row;
 	char* cv = NULL;
 	if (nvp_count(r->keywords) < 2) {
 		l = nvp_last(r->keywords);
@@ -195,7 +200,8 @@ void sql_show_tables(result_t *r)
 				}
 			}
 table_name_found:
-			nvp_add(&r->result,NULL,t->name->value);
+			row = row_add(&r->result,0);
+			nvp_add(&row->data,NULL,t->name->value);
 			l = t->name->next;
 			buff[0] = 0;
 			i = 0;
@@ -206,8 +212,7 @@ table_name_found:
 				l = l->next;
 				i++;
 			}
-			l = nvp_last(r->result);
-			nvp_add(&l->child,NULL,buff);
+			nvp_add(&row->data,NULL,buff);
 			t = t->next;
 		}
 	}else{
@@ -620,11 +625,12 @@ void sql_select(result_t *r)
 		result_group(r);
 	if (r->order)
 		result_order(r);
-	result_cols(r);
 	if (r->count)
 		result_count(r);
 	if (atoi(r->limit->value) > 0 || atoi(r->limit->next->value) > -1)
 		result_limit(r);
+	if (!(r->count && !r->group))
+		result_cols(r);
 
 	if (of) {
 		table_t *t;
@@ -636,7 +642,7 @@ void sql_select(result_t *r)
 			t = result_to_table(r,of->value);
 			table_write(t,of->value);
 		}
-		nvp_free_all(r->result);
+		row_free_all(r->result);
 		r->result = NULL;
 	}
 }
@@ -1002,11 +1008,11 @@ void sql_insert(result_t *r)
 	nvp_t *l;
 	nvp_t *n;
 	nvp_t *c;
-	nvp_t *row;
+	row_t *row;
+	row_t *t;
 	char* b;
 	int ig = 0;
 	int k;
-	char kbuff[20];
 	char buff[1024];
 	int key;
 	nvp_free_all(r->keywords);
@@ -1069,12 +1075,12 @@ end_cols:
 	l = l->next->next;
 	r->ar = 0;
 	while (l) {
-		nvp_add(&r->result,NULL,l->value);
-		n = nvp_last(r->result);
-		if (!n) {
+		row = row_add(&r->result,0);
+		if (!row) {
 			printf("internal error inserting values into table %s\n",n->value);
 			return;
 		}
+		nvp_add(&row->data,NULL,l->value);
 		l = l->next;
 		while (l) {
 			if (!strcmp(l->value,",")) {
@@ -1089,7 +1095,7 @@ end_cols:
 				}
 				goto end_rows;
 			}
-			nvp_add(&n->child,NULL,l->value);
+			nvp_add(&row->data,NULL,l->value);
 			l = l->next;
 		}
 		if (l)
@@ -1097,39 +1103,33 @@ end_cols:
 	}
 end_rows:
 
-	n = r->result;
-	while (n) {
+	t = r->result;
+	while (t) {
 		key = table_next_key(r->table);
-		sprintf(kbuff,"%d",key);
-		nvp_add(&r->table->rows,kbuff,NULL);
-		row = nvp_last(r->table->rows);
+
+		row = row_add(&r->table->rows,key);
 		c = r->table->columns;
 		while (c) {
 			k = nvp_searchi(r->cols,c->value);
 			if (k < 0) {
 				buff[0]= 0;
-			}else if (!k) {
-				strcpy(buff,n->value);
 			}else{
-				l = nvp_grabi(n->child,k-1);
+				l = nvp_grabi(t->data,k);
 				if (!l) {
 					buff[0]= 0;
 				}else{
 					strcpy(buff,l->value);
 				}
 			}
-			if (c->prev) {
-				nvp_add(&row->child,kbuff,buff);
-			}else{
-				nvp_set(row,kbuff,buff);
-			}
+
+			nvp_add(&row->data,NULL,buff);
 			c = c->next;
 		}
 		r->ar++;
-		n = n->next;
+		t = t->next;
 	}
 
-	nvp_free_all(r->result);
+	row_free_all(r->result);
 	r->result = NULL;
 }
 
@@ -1139,11 +1139,13 @@ void sql_update(result_t *r)
 	nvp_t *l;
 	nvp_t *n;
 	nvp_t *t;
-	nvp_t *row;
+	nvp_t *q;
+	row_t *row;
+	row_t *rw;
 	char* b;
 	char* c;
 	char* v;
-	char* q;
+	char* qu;
 	int k;
 	char buff[1024];
 	char cbuff[1024];
@@ -1194,18 +1196,18 @@ void sql_update(result_t *r)
 				v++;
 			buff[0] = 0;
 			while (v) {
-				q = strchr(v,'\'');
-				if (!q) {
+				qu = strchr(v,'\'');
+				if (!qu) {
 					strcat(buff,v);
 					break;
 				}
-				*q = 0;
+				*qu = 0;
 				strcat(buff,v);
-				*q = '\'';
-				if (*(q-1) == '\\') {
+				*qu = '\'';
+				if (*(qu-1) == '\\') {
 					strcat(buff,"'");
 				}
-				v = q+1;
+				v = qu+1;
 			}
 		}else{
 			l = l->next;
@@ -1230,18 +1232,18 @@ void sql_update(result_t *r)
 						v++;
 					buff[0] = 0;
 					while (v) {
-						q = strchr(v,'\'');
-						if (!q) {
+						qu = strchr(v,'\'');
+						if (!qu) {
 							strcat(buff,v);
 							break;
 						}
-						*q = 0;
+						*qu = 0;
 						strcat(buff,v);
-						*q = '\'';
-						if (*(q-1) == '\\') {
+						*qu = '\'';
+						if (*(qu-1) == '\\') {
 							strcat(buff,"'");
 						}
-						v = q+1;
+						v = qu+1;
 					}
 				}
 			}
@@ -1345,25 +1347,25 @@ void sql_update(result_t *r)
 				}
 				continue;
 			}else if (!strcasecmp(n->value,"ORDER") && n->next && !strcasecmp(n->next->value,"BY")) {
-				row = n->next->next;
-				if (!row) {
+				q = n->next->next;
+				if (!q) {
 					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
-				while (row) {
-					if (!strcmp(row->value,",")) {
-						row = row->next;
+				while (q) {
+					if (!strcmp(q->value,",")) {
+						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,row->value);
+					t = nvp_search(r->table->columns,q->value);
 					if (!t) {
-						if (is_keyword(row->value))
+						if (is_keyword(q->value))
 							break;
-						if ((c = strchr(row->value,'('))) {
+						if ((c = strchr(q->value,'('))) {
 							*c = 0;
-							if (!strcasecmp(row->value,"COLUMN")) {
+							if (!strcasecmp(q->value,"COLUMN")) {
 								*c = '(';
-								if (get_column_id(buff,r,row->value))
+								if (get_column_id(buff,r,q->value))
 									return;
 								k = atoi(buff);
 								k--;
@@ -1378,29 +1380,29 @@ void sql_update(result_t *r)
 					}
 					nvp_add(&r->order,NULL,t->value);
 					t = nvp_last(r->order);
-					row = row->next;
-					while (row) {
-						if (!strcasecmp(row->value,"AS")) {
-							row = row->next;
-							if (!row) {
+					q = q->next;
+					while (q) {
+						if (!strcasecmp(q->value,"AS")) {
+							q = q->next;
+							if (!q) {
 								printf("syntax error near 'AS': \"%s\"\n",r->q);
 								return;
 							}
-							if (!strcasecmp(row->value,"INT")) {
-								nvp_add(&t->child,NULL,row->value);
-							}else if (strcasecmp(row->value,"STRING")) {
-								printf("syntax error near unknown token '%s': \"%s\"\n",row->value,r->q);
+							if (!strcasecmp(q->value,"INT")) {
+								nvp_add(&t->child,NULL,q->value);
+							}else if (strcasecmp(q->value,"STRING")) {
+								printf("syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
 								return;
 							}
-						}else if (!strcasecmp(row->value,"DESC")) {
-							nvp_add(&t->child,NULL,row->value);
-						}else if (strcasecmp(row->value,"ASC")) {
+						}else if (!strcasecmp(q->value,"DESC")) {
+							nvp_add(&t->child,NULL,q->value);
+						}else if (strcasecmp(q->value,"ASC")) {
 							break;
 						}
-						row = row->next;
+						q = q->next;
 					}
 				}
-				n = row;
+				n = q;
 				continue;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
 				printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -1420,23 +1422,19 @@ void sql_update(result_t *r)
 		result_limit(r);
 	result_cols(r);
 
-	n = r->result;
+	rw = r->result;
 	r->ar = 0;
-	while (n) {
+	while (rw) {
 		r->ar++;
 		t = r->cols;
-		row = nvp_search_name(r->table->rows,n->name);
+		row = row_search(r->table->rows,rw->key);
 		if (!row) {
 			printf("internal error in update for table %s\n",r->table->name->value);
 			goto end_update;
 		}
 		while (t) {
 			k = nvp_searchi(r->table->columns,t->value);
-			if (!k) {
-				l = row;
-			}else{
-				l = nvp_grabi(row->child,k-1);
-			}
+			l = nvp_grabi(row->data,k);
 			if (!l) {
 				printf("unknown column '%s' for table %s\n",t->value,r->table->name->value);
 				goto end_update;
@@ -1444,10 +1442,10 @@ void sql_update(result_t *r)
 			nvp_set(l,NULL,t->name);
 			t = t->next;
 		}
-		n = n->next;
+		rw = rw->next;
 	}
 end_update:
-	nvp_free_all(r->result);
+	row_free_keys(r->result);
 	r->result = NULL;
 }
 
@@ -1457,7 +1455,9 @@ void sql_delete(result_t *r)
 	nvp_t *l;
 	nvp_t *n;
 	nvp_t *t;
-	nvp_t *row;
+	nvp_t *q;
+	row_t *row;
+	row_t *rw;
 	char* c;
 	int k;
 	char buff[1024];
@@ -1563,25 +1563,25 @@ void sql_delete(result_t *r)
 				}
 				continue;
 			}else if (!strcasecmp(n->value,"ORDER") && n->next && !strcasecmp(n->next->value,"BY")) {
-				row = n->next->next;
-				if (!row) {
+				q = n->next->next;
+				if (!q) {
 					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
-				while (row) {
-					if (!strcmp(row->value,",")) {
-						row = row->next;
+				while (q) {
+					if (!strcmp(q->value,",")) {
+						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,row->value);
+					t = nvp_search(r->table->columns,q->value);
 					if (!t) {
-						if (is_keyword(row->value))
+						if (is_keyword(q->value))
 							break;
-						if ((c = strchr(row->value,'('))) {
+						if ((c = strchr(q->value,'('))) {
 							*c = 0;
-							if (!strcasecmp(row->value,"COLUMN")) {
+							if (!strcasecmp(q->value,"COLUMN")) {
 								*c = '(';
-								if (get_column_id(buff,r,row->value))
+								if (get_column_id(buff,r,q->value))
 									return;
 								k = atoi(buff);
 								k--;
@@ -1596,29 +1596,29 @@ void sql_delete(result_t *r)
 					}
 					nvp_add(&r->order,NULL,t->value);
 					t = nvp_last(r->order);
-					row = row->next;
-					while (row) {
-						if (!strcasecmp(row->value,"AS")) {
-							row = row->next;
-							if (!row) {
+					q = q->next;
+					while (q) {
+						if (!strcasecmp(q->value,"AS")) {
+							q = q->next;
+							if (!q) {
 								printf("syntax error near 'AS': \"%s\"\n",r->q);
 								return;
 							}
-							if (!strcasecmp(row->value,"INT")) {
-								nvp_add(&t->child,NULL,row->value);
-							}else if (strcasecmp(row->value,"STRING")) {
-								printf("syntax error near unknown token '%s': \"%s\"\n",row->value,r->q);
+							if (!strcasecmp(q->value,"INT")) {
+								nvp_add(&t->child,NULL,q->value);
+							}else if (strcasecmp(q->value,"STRING")) {
+								printf("syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
 								return;
 							}
-						}else if (!strcasecmp(row->value,"DESC")) {
-							nvp_add(&t->child,NULL,row->value);
-						}else if (strcasecmp(row->value,"ASC")) {
+						}else if (!strcasecmp(q->value,"DESC")) {
+							nvp_add(&t->child,NULL,q->value);
+						}else if (strcasecmp(q->value,"ASC")) {
 							break;
 						}
-						row = row->next;
+						q = q->next;
 					}
 				}
-				n = row;
+				n = q;
 				continue;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
 				printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -1638,13 +1638,13 @@ void sql_delete(result_t *r)
 		result_limit(r);
 
 
-	n = r->result;
+	rw = r->result;
 	r->ar = 0;
-	while (n) {
-		row = nvp_search_name(r->table->rows,n->name);
+	while (rw) {
+		row = row_search(r->table->rows,rw->key);
 		if (!row) {
 			if (ign) {
-				n = n->next;
+				rw = rw->next;
 				continue;
 			}
 			printf("internal error in delete for table %s\n",r->table->name->value);
@@ -1658,11 +1658,12 @@ void sql_delete(result_t *r)
 		}
 		if (row->next)
 			row->next->prev = row->prev;
-		nvp_free(row);
-		n = n->next;
+		row->next = NULL;
+		row_free_all(row);
+		rw = rw->next;
 	}
 end_delete:
-	nvp_free_all(r->result);
+	row_free_all(r->result);
 	r->result = NULL;
 }
 

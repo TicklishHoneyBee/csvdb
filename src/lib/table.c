@@ -58,7 +58,6 @@ table_t *table_load_apache(char* file)
 	char* p;
 	char fbuff[2048];
 	char buff[1024];
-	char kbuff[20];
 	int key;
 	int b;
 	int l;
@@ -70,8 +69,9 @@ table_t *table_load_apache(char* file)
 	int fl;
 	int fp;
 	nvp_t *n;
-	nvp_t *row = NULL;
-	nvp_t **att;
+	nvp_t **row = NULL;
+	row_t **att;
+	row_t *rw;
 	table_t *t = table_find(file);
 
 	if (t)
@@ -84,7 +84,6 @@ table_t *table_load_apache(char* file)
 	t = table_add();
 	t->name = nvp_create(NULL,file);
 	key = table_next_key(t);
-	sprintf(kbuff,"%d",key);
 
 	b = 0;
 	l = 0;
@@ -119,6 +118,7 @@ table_t *table_load_apache(char* file)
 			continue;
 		}else if (!b && c == '[') {
 			tm = 1;
+			continue;
 		}else if (!b && c != '\n' && isspace(c)) {
 			continue;
 		}else if (c == ' ' || c == '\n') {
@@ -128,26 +128,28 @@ column_end:
 				b = 0;
 				continue;
 			}
-			b = 0;
 			if (!l) {
 				nvp_add(&t->columns,NULL,buff);
 				cc++;
 			}
 			if (!ccc) {
-				if (!b && fp == fl)
+				if (!b && fp == fl) {
+					printf("lines: %d\n",l);
 					break;
-				row = nvp_add(att,kbuff,buff);
-				att = &row->next;
-				ccc++;
-			}else{
-				nvp_add(&row->child,kbuff,buff);
-				ccc++;
+				}
+				rw = row_add(att,key);
+				att = &rw;
+				row = &rw->data;
 			}
+
+			b = 0;
+			nvp_add(row,NULL,buff);
+			ccc++;
+
 			if (c == '\n') {
 				l++;
 				ccc = 0;
 				key = table_next_key(t);
-				sprintf(kbuff,"%d",key);
 			}
 			continue;
 		}
@@ -205,7 +207,6 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	char c = ' ';
 	char fbuff[2048];
 	char buff[1024];
-	char kbuff[20];
 	int key;
 	int b;
 	int l;
@@ -217,7 +218,9 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	int cc = 0;
 	int ccc = 0;
 	nvp_t *n;
-	nvp_t *row = NULL;
+	nvp_t **row = NULL;
+	row_t **att;
+	row_t *rw;
 	table_t *t = table_find(file);
 
 	if (t)
@@ -230,7 +233,6 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	t = table_add();
 	t->name = nvp_create(NULL,file);
 	key = table_next_key(t);
-	sprintf(kbuff,"%d",key);
 
 	if (cols) {
 		n = cols;
@@ -248,6 +250,7 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	r = 1;
 	fl = 0;
 	fp = 0;
+	att = &t->rows;
 	while (r > 0) {
 		if (fp == fl) {
 			r = fread(fbuff,1,2048,f);
@@ -287,22 +290,23 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 column_end:
 			buff[b] = 0;
 			if (!cols && !l) {
-				nvp_add(&t->columns,kbuff,buff);
+				nvp_add(&t->columns,NULL,buff);
 				cc++;
 			}else if (!ccc) {
 				if (!b && fp == fl)
 					break;
-				row = nvp_add(&t->rows,kbuff,buff);
-				ccc++;
-			}else{
-				nvp_add(&row->child,kbuff,buff);
-				ccc++;
+				rw = row_add(att,key);
+				att = &rw;
+				row = &rw->data;
 			}
+
+			nvp_add(row,NULL,buff);
+			ccc++;
+
 			if (c == '\n') {
 				l++;
 				ccc = 0;
 				key = table_next_key(t);
-				sprintf(kbuff,"%d",key);
 			}
 			b = 0;
 			continue;
@@ -351,7 +355,7 @@ void table_free(char* name)
 			tables->prev = NULL;
 	}
 
-	nvp_free_all(t->rows);
+	row_free_all(t->rows);
 	nvp_free_all(t->columns);
 	nvp_free_all(t->name);
 	free(t);
@@ -360,7 +364,7 @@ void table_free(char* name)
 int table_write(table_t *t, char* of)
 {
 	FILE *f;
-	nvp_t *r;
+	row_t *r;
 	nvp_t *v;
 	char* q;
 	char* p;
@@ -377,33 +381,18 @@ int table_write(table_t *t, char* of)
 	if (!f)
 		return -2;
 
-	r = t->columns;
-	while (r) {
-		if (r->prev)
+	v = t->columns;
+	while (v) {
+		if (v->prev)
 			fputs(",",f);
-		fputs(r->value,f);
-		r = r->next;
+		fputs(v->value,f);
+		v = v->next;
 	}
 	fputs("\n",f);
 
 	r = t->rows;
 	while (r) {
-		if (strchr(r->value,',') || strchr(r->value,'\n') || strchr(r->value,' ') || strchr(r->value,'"')) {
-			p = r->value;
-			fputs("\"",f);
-			while ((q = strchr(p,'"'))) {
-				*q = 0;
-				fputs(p,f);
-				fputs("\\",f);
-				*q = '"';
-				p = q;
-			}
-			fputs(p,f);
-			fputs("\"",f);
-		}else{
-			fputs(r->value,f);
-		}
-		v = r->child;
+		v = r->data;
 		while (v) {
 			fputs(",",f);
 			if (strchr(v->value,',') || strchr(v->value,'\n') || strchr(v->value,' ') || strchr(v->value,'"')) {

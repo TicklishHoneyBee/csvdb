@@ -163,11 +163,19 @@ char* csvdb_readline(char delim)
 		stmt = realloc(stmt, slen + llen + 1);
 		memcpy(stmt + slen, line, llen + 1);
 		slen += llen;
+		/* quit doesn't require a ; */
+		if (!strcasecmp(stmt,"QUIT"))
+			return stmt;
 	}
 
 	if ((stmt || (stmt = line)) && !(stmt[0] == '\0' || stmt[0] == ' ')) {
 		/* lest we lose our precious lines */
 		add_history(stmt);
+	}
+
+	/* cut the delimiter off the end */
+	if (stmt && (slen = strlen(stmt)) && stmt[slen-1] == delim) {
+		stmt[slen-1] = 0;
 	}
 	return stmt;
 }

@@ -23,42 +23,41 @@ void result_where(result_t *r)
 	int j;
 	int k;
 	int c = 0;
+	int hl = 0;
 	int lim = atoi(r->limit->next->value);
-	int off = 0;
+	int off = atoi(r->limit->value);
 	int tl = off+lim;
 	nvp_t *l;
 	nvp_t *q;
-	nvp_t *n = r->table->rows;
+	row_t *row = r->table->rows;
+	row_t *rw;
 	if (lim > -1) {
+		hl = 1;
 		if (r->group) {
-			lim = -1;
+			hl = 0;
 		}else if (r->order) {
-			lim = -1;
+			hl = 0;
 		}else if (strncasecmp(r->q,"SELECT ",7)) {
-			lim = -1;
+			hl = 0;
 		}else if (r->count) {
-			lim = -1;
+			hl = 0;
 		}else{
 			l = r->cols;
 			while (l) {
 				if (nvp_search(l->child,"DISTINCT")) {
-					lim = -1;
+					hl = 0;
 					break;
 				}
 				l = l->next;
 			}
 		}
 	}
-	while (n) {
+	while (row) {
 		j = 0;
 		q = r->where;
 		while (q) {
 			k = nvp_searchi(r->table->columns,q->name);
-			if (!k) {
-				l = n;
-			}else{
-				l = nvp_grabi(n->child,k-1);
-			}
+			l = nvp_grabi(row->data,k);
 			if (l) {
 				if (strchr(q->value,'%') && q->child) {
 					if (!strcasestr(l->value,q->child->value))
@@ -74,20 +73,16 @@ void result_where(result_t *r)
 		}
 		if (!j) {
 			c++;
-			nvp_add(&r->result,n->name,n->value);
-			l = nvp_last(r->result);
-			if (l) {
-				nvp_t **v = &l->child;
-				q = n->child;
-				while (q) {
-					nvp_add(v,q->name,q->value);
-					q = q->next;
-				}
+			if (hl && c < off) {
+				row = row->next;
+				continue;
 			}
+			rw = row_add(&r->result,row->key);
+			rw->data = row->data;
 		}
-		if (lim > -1 && c == tl)
+		if (hl && c == tl)
 			break;
-		n = n->next;
+		row = row->next;
 	}
 }
 
@@ -96,9 +91,9 @@ void result_distinct(result_t *r)
 	int j;
 	nvp_t *l;
 	nvp_t *u;
-	nvp_t *q;
-	nvp_t *t;
-	nvp_t *trs;
+	row_t *q;
+	row_t *tr;
+	row_t *trs;
 	nvp_t *n = r->cols;
 	while (n) {
 		if (nvp_search(n->child,"DISTINCT")) {
@@ -112,26 +107,15 @@ void result_distinct(result_t *r)
 			}
 			q = r->result;
 			while (q) {
-				if (!j) {
-					l = q;
-				}else{
-					l = nvp_grabi(q->child,j-1);
-				}
+				l = nvp_grabi(q->data,j);
 				if (l && !nvp_search(u,l->value)) {
 					nvp_add(&u,NULL,l->value);
-					nvp_add(&trs,q->name,q->value);
-					l = nvp_last(trs);
-					if (l) {
-						nvp_t **v = &l->child;
-						t = q->child;
-						while (t) {
-							nvp_add(v,t->name,t->value);
-							t = t->next;
-						}
-					}
+					tr = row_add(&trs,q->key);
+					tr->data = q->data;
 				}
 				q = q->next;
 			}
+			row_free_keys(r->result);
 			r->result = trs;
 		}
 		n = n->next;
@@ -147,10 +131,11 @@ void result_group(result_t *r)
 	char sbuff[64];
 	nvp_t *l;
 	nvp_t *u;
-	nvp_t *q;
+	row_t *q;
 	nvp_t *t;
+	row_t *tr;
 	nvp_t **b;
-	nvp_t *trs;
+	row_t *trs;
 	nvp_t *n = r->group;
 	while (n) {
 		trs = NULL;
@@ -158,11 +143,7 @@ void result_group(result_t *r)
 		u = NULL;
 		q = r->result;
 		while (q) {
-			if (k) {
-				t = nvp_grabi(q->child,k-1);
-			}else{
-				t = q;
-			}
+			t = nvp_grabi(q->data,k);
 			if (t) {
 				sprintf(buff,"%s",t->value);
 			}else{
@@ -186,18 +167,13 @@ void result_group(result_t *r)
 				l = l->next;
 			}
 			if (!nvp_search(u,buff)) {
-				if (trs) {
-					l = nvp_last(trs);
-					l->next = nvp_insert_all(NULL,q);
-					l->next->prev = l;
-				}else{
-					trs = nvp_insert_all(NULL,q);
-				}
+				tr = row_add(&trs,q->key);
+				tr->data = q->data;
 				nvp_add(&u,NULL,buff);
 			}
 			q = q->next;
 		}
-		nvp_free_all(r->result);
+		row_free_keys(r->result);
 		r->result = trs;
 		n = n->next;
 	}
@@ -207,10 +183,11 @@ void result_order(result_t *r)
 {
 	int k;
 	char buff[1024];
-	nvp_t *l;
-	nvp_t *q;
+	row_t *l;
+	row_t *q;
 	nvp_t *t;
-	nvp_t *trs;
+	row_t *tr;
+	row_t *trs;
 	nvp_t *n = r->order;
 	while (n) {
 		trs = NULL;
@@ -219,64 +196,56 @@ void result_order(result_t *r)
 			if (!nvp_search(n->child,"DESC")) {
 				q = r->result;
 				while (q) {
-					if (k) {
-						t = nvp_grabi(q->child,k-1);
-					}else{
-						t = q;
-					}
+					t = nvp_grabi(q->data,k);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						strcpy(buff,"0");
 					}
-					if ((l = nvp_search_higher_int(trs,k,buff))) {
-						t = nvp_insert_all(l->prev,q);
-						if (!l->prev) {
-							t->next = trs;
-							trs->prev = t;
-							trs = t;
+					if ((l = row_search_higher_int(trs,k,buff))) {
+						tr = row_create(q->key);
+						tr->data = q->data;
+						if (l->prev) {
+							tr->prev = l->prev;
+							tr->next = l;
+							l->prev = tr;
+							tr->prev->next = tr;
+						}else{
+							tr->next = trs;
+							if (trs)
+								trs->prev = tr;
+							trs = tr;
 						}
 					}else{
-						t = nvp_last(trs);
-						l = nvp_insert_all(NULL,q);
-						if (t) {
-							t->next = l;
-							t->next->prev = t;
-						}else{
-							trs = l;
-						}
+						l = row_add(&trs,q->key);
 					}
 					q = q->next;
 				}
 			}else{
 				q = r->result;
 				while (q) {
-					if (k) {
-						t = nvp_grabi(q->child,k-1);
-					}else{
-						t = q;
-					}
+					t = nvp_grabi(q->data,k);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						strcpy(buff,"0");
 					}
-					if ((l = nvp_search_lower_int(trs,k,buff))) {
-						t = nvp_insert_all(l->prev,q);
-						if (!l->prev) {
-							t->next = trs;
-							trs->prev = t;
-							trs = t;
+					if ((l = row_search_lower_int(trs,k,buff))) {
+						tr = row_create(q->key);
+						tr->data = q->data;
+						if (l->prev) {
+							tr->prev = l->prev;
+							tr->next = l;
+							l->prev = tr;
+							tr->prev->next = tr;
+						}else{
+							tr->next = trs;
+							if (trs)
+								trs->prev = tr;
+							trs = tr;
 						}
 					}else{
-						t = nvp_last(trs);
-						l = nvp_insert_all(NULL,q);
-						if (t) {
-							t->next = l;
-							t->next->prev = t;
-						}else{
-							trs = l;
-						}
+						l = row_add(&trs,q->key);
 					}
 					q = q->next;
 				}
@@ -285,70 +254,62 @@ void result_order(result_t *r)
 			if (!nvp_search(n->child,"DESC")) {
 				q = r->result;
 				while (q) {
-					if (k) {
-						t = nvp_grabi(q->child,k-1);
-					}else{
-						t = q;
-					}
+					t = nvp_grabi(q->data,k);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						buff[0] = 0;
 					}
-					if ((l = nvp_search_higher_string(trs,k,buff))) {
-						t = nvp_insert_all(l->prev,q);
-						if (!l->prev) {
-							t->next = trs;
-							trs->prev = t;
-							trs = t;
+					if ((l = row_search_higher_string(trs,k,buff))) {
+						tr = row_create(q->key);
+						tr->data = q->data;
+						if (l->prev) {
+							tr->prev = l->prev;
+							tr->next = l;
+							l->prev = tr;
+							tr->prev->next = tr;
+						}else{
+							tr->next = trs;
+							if (trs)
+								trs->prev = tr;
+							trs = tr;
 						}
 					}else{
-						t = nvp_last(trs);
-						l = nvp_insert_all(NULL,q);
-						if (t) {
-							t->next = l;
-							t->next->prev = t;
-						}else{
-							trs = l;
-						}
+						l = row_add(&trs,q->key);
 					}
 					q = q->next;
 				}
 			}else{
 				q = r->result;
 				while (q) {
-					if (k) {
-						t = nvp_grabi(q->child,k-1);
-					}else{
-						t = q;
-					}
+					t = nvp_grabi(q->data,k);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						buff[0] = 0;
 					}
-					if ((l = nvp_search_lower_string(trs,k,buff))) {
-						t = nvp_insert_all(l->prev,q);
-						if (!l->prev) {
-							t->next = trs;
-							trs->prev = t;
-							trs = t;
+					if ((l = row_search_lower_string(trs,k,buff))) {
+						tr = row_create(q->key);
+						tr->data = q->data;
+						if (l->prev) {
+							tr->prev = l->prev;
+							tr->next = l;
+							l->prev = tr;
+							tr->prev->next = tr;
+						}else{
+							tr->next = trs;
+							if (trs)
+								trs->prev = tr;
+							trs = tr;
 						}
 					}else{
-						t = nvp_last(trs);
-						l = nvp_insert_all(NULL,q);
-						if (t) {
-							t->next = l;
-							t->next->prev = t;
-						}else{
-							trs = l;
-						}
+						l = row_add(&trs,q->key);
 					}
 					q = q->next;
 				}
 			}
 		}
-		nvp_free_all(r->result);
+		row_free_keys(r->result);
 		r->result = trs;
 		n = n->next;
 	}
@@ -357,12 +318,10 @@ void result_order(result_t *r)
 void result_cols(result_t *r)
 {
 	int k;
-	nvp_t *l;
 	nvp_t *q;
 	nvp_t *u;
 	nvp_t *t;
-	nvp_t *trs = NULL;
-	nvp_t *n = r->result;
+	row_t *n = r->result;
 	if (!r->cols && r->count)
 		return;
 	while (n) {
@@ -375,36 +334,17 @@ void result_cols(result_t *r)
 			}else{
 				k = nvp_searchi(r->table->columns,q->value);
 			}
-			if (!k) {
-				t = n;
-			}else{
-				t = nvp_grabi(n->child,k-1);
-			}
+			t = nvp_grabi(n->data,k);
 			if (t) {
-				if (u) {
-					nvp_add(&u->child,NULL,t->value);
-				}else{
-					u = nvp_create(NULL,t->value);
-				}
+				nvp_add(&u,NULL,t->value);
 			}else{
-				if (u) {
-					nvp_add(&u->child,n->name,"NULL");
-				}else{
-					u = nvp_create(NULL,"NULL");
-				}
+				nvp_add(&u,NULL,"NULL");
 			}
 			q = q->next;
 		}
-		l = nvp_last(trs);
-		if (l) {
-			l->next = u;
-		}else{
-			trs = u;
-		}
+		n->data = u;
 		n = n->next;
 	}
-	nvp_free_all(r->result);
-	r->result = trs;
 }
 
 void result_count(result_t *r)
@@ -416,10 +356,10 @@ void result_count(result_t *r)
 	char* c1;
 	nvp_t *l;
 	nvp_t *q;
-	nvp_t *t;
+	row_t *t;
 	nvp_t *u;
-	j = nvp_count(r->result);
 	if (r->count && strlen(r->count->value)) {
+		j = row_count(r->result);
 		if (!r->group) {
 			sprintf(buff,"%d",j);
 			if (r->count->child && !strcasecmp(r->count->child->value,"AS")) {
@@ -436,7 +376,9 @@ void result_count(result_t *r)
 				}
 				q = q->next;
 			}
-			r->result = nvp_create(NULL,buff);
+			row_free_all(r->result);
+			r->result = row_create(0);
+			r->result->data = nvp_create(NULL,buff);
 		}else{
 			q = r->count;
 			while (q) {
@@ -448,7 +390,7 @@ void result_count(result_t *r)
 					c = strchr(u->name,'-');
 					if (!c) {
 						printf("internal error on group by counts '%s'\n",u->name);
-						nvp_free_all(r->result);
+						row_free_all(r->result);
 						r->result = NULL;
 						return;
 					}
@@ -461,19 +403,15 @@ void result_count(result_t *r)
 					}
 					t = r->result;
 					while (t) {
-						if (!k) {
-							l = t;
-						}else{
-							l = nvp_grabi(t->child,k-1);
-						}
+						l = nvp_grabi(t->data,k);
 						if (!l) {
 							if (!strcmp(c1,"NULL")) {
-								nvp_add(&t->child,NULL,u->value);
+								nvp_add(&t->data,NULL,u->value);
 								break;
 							}
 						}else{
 							if (!strcmp(l->value,c1)) {
-								nvp_add(&t->child,NULL,u->value);
+								nvp_add(&t->data,NULL,u->value);
 								break;
 							}
 						}
@@ -497,30 +435,28 @@ void result_limit(result_t *r)
 	int j = 0;
 	int lim1;
 	int lim2;
-	nvp_t *l;
-	nvp_t *u;
-	nvp_t *trs = NULL;
-	nvp_t *n = r->result;
+	row_t *trs = NULL;
+	row_t *n = r->result;
 	lim1 = atoi(r->limit->value);
 	lim2 = atoi(r->limit->next->value);
 	while (n) {
-		if (j >= lim1) {
-			u = nvp_insert_all(NULL,n);
-			l = nvp_last(trs);
-			if (l) {
-				l->next = u;
-				u->prev = l;
-			}else{
-				trs = u;
+		if (j && j == lim1) {
+			trs = n;
+			if (n->prev) {
+				n->prev->next = NULL;
+				n->prev = NULL;
+				row_free_keys(r->result);
 			}
+			r->result = trs;
 		}
 		j++;
-		if (lim2 > -1 && j >= lim1+lim2)
+		if (lim2 > -1 && j >= lim1+lim2) {
+			row_free_keys(n->next);
+			n->next = NULL;
 			break;
+		}
 		n = n->next;
 	}
-	nvp_free_all(r->result);
-	r->result = trs;
 }
 
 void result_free(result_t *r)
@@ -536,7 +472,7 @@ void result_free(result_t *r)
 	nvp_free_all(r->order);
 	nvp_free_all(r->limit);
 	nvp_free_all(r->count);
-	nvp_free_all(r->result);
+	row_free_all(r->result);
 
 	free(r);
 }
@@ -544,11 +480,10 @@ void result_free(result_t *r)
 table_t *result_to_table(result_t *r, char* name)
 {
 	table_t *t;
-	nvp_t *n;
+	row_t *n;
 	nvp_t *c;
-	nvp_t *cr;
+	row_t *cr;
 	int key;
-	char kbuff[64];
 
 	if (!r || !name)
 		return NULL;
@@ -566,13 +501,12 @@ table_t *result_to_table(result_t *r, char* name)
 	n = r->result;
 	while (n) {
 		key = table_next_key(t);
-		sprintf(kbuff,"%d",key);
-		nvp_add(&t->rows,kbuff,n->value);
-		cr = nvp_last(t->rows);
+
+		cr = row_add(&t->rows,key);
 		if (cr) {
-			c = n->child;
+			c = n->data;
 			while (c) {
-				nvp_add(&cr->child,kbuff,c->value);
+				nvp_add(&cr->data,NULL,c->value);
 				c = c->next;
 			}
 		}

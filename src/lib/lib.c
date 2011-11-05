@@ -102,10 +102,10 @@ int get_column_id(char* buff, result_t *r, char* str)
 
 int csvdb_print_result(result_t *res)
 {
-	nvp_t *row;
+	row_t *row;
 	nvp_t *col;
 	nvp_t *t;
-	nvp_t *r;
+	row_t *r;
 	float tm;
 	char* s = "";
 	int rc;
@@ -114,7 +114,7 @@ int csvdb_print_result(result_t *res)
 		return -1;
 	}
 	r = res->result;
-	rc = nvp_count(r);
+	rc = row_count(r);
 	if (rc != 1)
 		s = "s";
 
@@ -144,10 +144,13 @@ int csvdb_print_result(result_t *res)
 
 	row = r;
 	while (row) {
-		printf("%s",row->value);
-		col = row->child;
+		col = row->data;
 		while (col) {
-			printf(" | %s",col->value);
+			if (col->prev) {
+				printf(" | %s",col->value);
+			}else{
+				printf("%s",col->value);
+			}
 			col = col->next;
 		}
 		printf("\r\n");

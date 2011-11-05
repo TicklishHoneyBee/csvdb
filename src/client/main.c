@@ -52,20 +52,19 @@ static void interact_orig(char *buff)
 	char* b;
 	char sbuff[64];
 	int i;
-	size_t ign;
 
 	history_load();
 	set_tty_raw();
-	ign = write(STDOUT_FILENO,banner,sizeof(banner) - 1);
-	ign = write(STDOUT_FILENO,discl,sizeof(discl) - 1);
-	ign = write(STDOUT_FILENO,csvdb_prompt,strlen(csvdb_prompt));
+	write(STDOUT_FILENO,banner,sizeof(banner) - 1);
+	write(STDOUT_FILENO,discl,sizeof(discl) - 1);
+	write(STDOUT_FILENO,csvdb_prompt,strlen(csvdb_prompt));
 
 	while ((c = getch()) != 0x04) {
 		if (c == '\'' && (!o || buff[o-1] != '\\'))
 			is = !is;
 		if (c == 8) {
 			sprintf(sbuff," %c",8);
-			ign = write(STDOUT_FILENO,sbuff,2);
+			write(STDOUT_FILENO,sbuff,2);
 			if (o)
 				o--;
 			if (eq) {
@@ -76,7 +75,7 @@ static void interact_orig(char *buff)
 			}
 			continue;
 		}else if (c == 0x03) {
-			ign = write(STDOUT_FILENO,"\r\ncsvDB> ",9);
+			write(STDOUT_FILENO,"\r\ncsvDB> ",9);
 			eq = 0;
 			is = 0;
 			o = 0;
@@ -87,17 +86,17 @@ static void interact_orig(char *buff)
 				if (c == 65) {
 					b = history_prev();
 					/* undo the up arrow */
-					ign = write(STDOUT_FILENO,"\r\n\r",3);
+					write(STDOUT_FILENO,"\r\n\r",3);
 					o += 8;
 					for (i=0; i<o; i++) {
-						ign = write(STDOUT_FILENO," ",1);
+						write(STDOUT_FILENO," ",1);
 					}
-					ign = write(STDOUT_FILENO,"\rcsvDB> ",8);
+					write(STDOUT_FILENO,"\rcsvDB> ",8);
 					if (b[0]) {
 						strcpy(buff,b);
 						o = strlen(buff);
-						ign = write(STDOUT_FILENO,buff,o);
-						ign = write(STDOUT_FILENO,";",1);
+						write(STDOUT_FILENO,buff,o);
+						write(STDOUT_FILENO,";",1);
 						o++;
 						eq = 1;
 					}else{
@@ -110,17 +109,17 @@ static void interact_orig(char *buff)
 					b = history_next();
 					/* undo the down arrow */
 					sprintf(sbuff,"%c%c%c\r",27,91,65);
-					ign = write(STDOUT_FILENO,sbuff,4);
+					write(STDOUT_FILENO,sbuff,4);
 					o += 8;
 					for (i=0; i<o; i++) {
-						ign = write(STDOUT_FILENO," ",1);
+						write(STDOUT_FILENO," ",1);
 					}
-					ign = write(STDOUT_FILENO,"\rcsvDB> ",8);
+					write(STDOUT_FILENO,"\rcsvDB> ",8);
 					if (b[0]) {
 						strcpy(buff,b);
 						o = strlen(buff);
-						ign = write(STDOUT_FILENO,buff,o);
-						ign = write(STDOUT_FILENO,";",1);
+						write(STDOUT_FILENO,buff,o);
+						write(STDOUT_FILENO,";",1);
 						o++;
 						eq = 1;
 					}else{
@@ -132,12 +131,12 @@ static void interact_orig(char *buff)
 				}else if (c == 67) {
 					/* undo the right arrow */
 					sprintf(sbuff,"%c%c%c",27,91,68);
-					ign = write(STDOUT_FILENO,sbuff,3);
+					write(STDOUT_FILENO,sbuff,3);
 					/* left */
 				}else if (c == 68) {
 					/* undo the left arrow */
 					sprintf(sbuff,"%c%c%c",27,91,67);
-					ign = write(STDOUT_FILENO,sbuff,3);
+					write(STDOUT_FILENO,sbuff,3);
 				}
 			}else if (c == d) {
 				buff[o] = 0;
@@ -145,13 +144,13 @@ static void interact_orig(char *buff)
 				continue;
 			}else if (c == '\n' || c == '\r') {
 				if (!o) {
-					ign = write(STDOUT_FILENO,"\r\ncsvDB> ",9);
+					write(STDOUT_FILENO,"\r\ncsvDB> ",9);
 					continue;
 				}
 				if (eq) {
 					if (!strcasecmp(buff,"QUIT"))
 						break;
-					ign = write(STDOUT_FILENO,"\r\n",2);
+					write(STDOUT_FILENO,"\r\n",2);
 					if (o) {
 						set_tty_cooked();
 						r = csvdb_query(buff);
@@ -162,7 +161,7 @@ static void interact_orig(char *buff)
 						o = 0;
 					}
 					eq = 0;
-					ign = write(STDOUT_FILENO,"\r\ncsvDB> ",9);
+					write(STDOUT_FILENO,"\r\ncsvDB> ",9);
 					continue;
 				}
 				buff[o] = 0;
@@ -170,12 +169,12 @@ static void interact_orig(char *buff)
 					break;
 				if (!strncasecmp(buff,"DELIMITER",9)) {
 					d = buff[10];
-					ign = write(STDOUT_FILENO,"\r\ncsvDB> ",9);
+					write(STDOUT_FILENO,"\r\ncsvDB> ",9);
 					o = 0;
 					continue;
 				}
 				c = ' ';
-				ign = write(STDOUT_FILENO,"\n> ",3);
+				write(STDOUT_FILENO,"\n> ",3);
 				if (!o)
 					continue;
 			}
@@ -196,13 +195,12 @@ static void interact_rdln(void)
 {
 	char d = ';';
 	char *line;
-	size_t i;
 
 	csvdb_init_readline();
 
 	/* print some banners, then go interactive */
-	i = write(STDOUT_FILENO, banner, sizeof(banner) - 1);
-	i = write(STDOUT_FILENO, discl, sizeof(discl) - 1);
+	write(STDOUT_FILENO, banner, sizeof(banner) - 1);
+	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
 
 	while ((line = csvdb_readline(d))) {
 		/* check for special commands */

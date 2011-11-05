@@ -30,7 +30,7 @@ typedef struct table_s {
 	int key;
 	nvp_t *name;
 	nvp_t *columns;
-	nvp_t *rows;
+	row_t *rows;
 	struct table_s *prev;
 	struct table_s *next;
 } table_t;
@@ -46,7 +46,7 @@ typedef struct result_s {
 	nvp_t *order;
 	nvp_t *limit;
 	nvp_t *count;
-	nvp_t *result;
+	row_t *result;
 	unsigned int time;
 } result_t;
 
@@ -98,5 +98,18 @@ void result_count(result_t *r);
 void result_limit(result_t *r);
 void result_free(result_t *r);
 table_t *result_to_table(result_t *r, char* name);
+
+/* defined in row.c */
+row_t *row_create(int key);
+row_t *row_add(row_t **stack, int key);
+void row_free(row_t *r);
+void row_free_keys(row_t *r);
+void row_free_all(row_t *r);
+row_t *row_search(row_t *r, int key);
+row_t *row_search_lower_int(row_t *stack, int i, char* value);
+row_t *row_search_higher_int(row_t *stack, int i, char* value);
+row_t *row_search_lower_string(row_t *stack, int i, char* value);
+row_t *row_search_higher_string(row_t *stack, int i, char* value);
+int row_count(row_t *stack);
 
 #endif
