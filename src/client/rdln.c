@@ -51,6 +51,7 @@ static char* keywords[] = {
 	"DESCRIBE",
 	"SHOW",
 	"LOAD DATA INFILE",
+	"QUIT",
 	NULL
 };
 
@@ -68,6 +69,10 @@ static char* sub_keywords[] = {
 	"HAVING",
 	"ORDER BY",
 	"INTO",
+	"AS",
+	"TABLES",
+	"COLUMNS",
+	"FILE",
 	NULL
 };
 
@@ -86,23 +91,37 @@ static char* key_generator(const char *UNUSED(text), int UNUSED(state))
 	/* if no names matched, then return NULL. */
 	return NULL;
 }
-/* completers */
 static char* tbl_generator(const char *UNUSED(text), int UNUSED(state))
 {
-	if (!state) {
-		table_t *t = tables;
-		nvp_t *n;
-		size_t l = strlen(text);
-		while (t) {
-			n = t->name;
-			while (n) {
-				if (!strncmp(text,n->value,l)) {
-					return strdup(n->value);
-				}
-				n = n->next;
+	table_t *t = tables;
+	nvp_t *n;
+	size_t l = strlen(text);
+	int f = 0;
+	int i;
+	while (t) {
+		n = t->name;
+		while (n) {
+			if (!strncmp(text,n->value,l) && state <= f++) {
+				return strdup(n->value);
 			}
-			t = t->next;
+			n = n->next;
 		}
+		t = t->next;
+	}
+	t = tables;
+	while (t) {
+		n = t->columns;
+		while (n) {
+			if (!strncmp(text,n->value,l) && state <= f++) {
+				return strdup(n->value);
+			}
+			n = n->next;
+		}
+		t = t->next;
+	}
+	for (i=0; sub_keywords[i]; i++) {
+		if (!strncasecmp(text,sub_keywords[i],l) && state <= f++)
+			return strdup(sub_keywords[i]);
 	}
 	/* if no names matched, then return NULL. */
 	return NULL;
@@ -222,7 +241,7 @@ char* csvdb_readline(char delim)
 		memcpy(stmt + slen, line, llen + 1);
 		slen += llen;
 		/* quit doesn't require a ; */
-		if (!strcasecmp(stmt,"QUIT"))
+		if (!strncasecmp(stmt,"QUIT",4) && (slen == 4 || slen == 5))
 			return stmt;
 	}
 
