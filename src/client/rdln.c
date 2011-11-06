@@ -72,14 +72,12 @@ static char* keywords[] = {
 /* completers */
 static char* key_generator(const char *UNUSED(text), int UNUSED(state))
 {
-	if (!state) {
-		int i;
-		int f = 0;
-		size_t l = strlen(text);
-		for (i=0; keywords[i]; i++) {
-			if (!strncasecmp(text,keywords[i],l) && state >= f++)
-				return strdup(keywords[i]);
-		}
+	int i;
+	int f = 0;
+	size_t l = strlen(text);
+	for (i=0; keywords[i]; i++) {
+		if (!strncasecmp(text,keywords[i],l) && state <= f++)
+			return strdup(keywords[i]);
 	}
 	/* if no names matched, then return NULL. */
 	return NULL;
