@@ -43,23 +43,64 @@
 char *csvdb_prompt = "csvDB> ";
 char *csvdb_histfile = NULL;
 
+static char* keywords[] = {
+	"SELECT",
+	"INSERT",
+	"UPDATE",
+	"CREATE",
+	"DESCRIBE",
+	"SHOW",
+	"LOAD DATA INFILE",
+	"WITHOUT NAMES",
+	"APACHE",
+	"ALL",
+	"DISTINCT",
+	"DISTINCTROW",
+	"FROM",
+	"WHERE",
+	"LIMIT",
+	"OFFSET",
+	"GROUP BY",
+	"HAVING",
+	"ORDER BY",
+	"INTO",
+	NULL
+};
+
 /* this is pretty non-functional if USE_READLINE hasn't been set */
 #if defined USE_READLINE
 /* completers */
-static char* cmd_generator(const char *UNUSED(text), int UNUSED(state))
+static char* key_generator(const char *UNUSED(text), int UNUSED(state))
 {
-	table_t *t = tables;
-	nvp_t *n;
-	size_t l = strlen(text);
-	while (t) {
-		n = t->name;
-		while (n) {
-			if (!strncmp(text,n->value,l)) {
-				return strdup(n->value);
-			}
-			n = n->next;
+	if (!state) {
+		int i;
+		int f = 0;
+		size_t l = strlen(text);
+		for (i=0; keywords[i]; i++) {
+			if (!strncasecmp(text,keywords[i],l) && state >= f++)
+				return strdup(keywords[i]);
 		}
-		t = t->next;
+	}
+	/* if no names matched, then return NULL. */
+	return NULL;
+}
+/* completers */
+static char* tbl_generator(const char *UNUSED(text), int UNUSED(state))
+{
+	if (!state) {
+		table_t *t = tables;
+		nvp_t *n;
+		size_t l = strlen(text);
+		while (t) {
+			n = t->name;
+			while (n) {
+				if (!strncmp(text,n->value,l)) {
+					return strdup(n->value);
+				}
+				n = n->next;
+			}
+			t = t->next;
+		}
 	}
 	/* if no names matched, then return NULL. */
 	return NULL;
@@ -80,9 +121,11 @@ static char** csvdb_comp(const char *text, int start, int UNUSED(end))
 	/* If this word is at the start of the line, then it is a command
 	   to complete.  Otherwise it is the name of a file in the current
 	   directory. */
-	if (start == 0) {
+	if (!start) {
+		matches = rl_completion_matches(text, key_generator);
+	}else{
 		/* TODO */
-		matches = rl_completion_matches(text, cmd_generator);
+		matches = rl_completion_matches(text, tbl_generator);
 	}
 	return matches;
 }
