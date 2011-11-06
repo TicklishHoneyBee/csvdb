@@ -478,16 +478,53 @@ void sql_select(result_t *r)
 					}else if (!n->next) {
 						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
-					}else if (strcmp(n->value,"=") && strcasecmp(n->value,"LIKE") && strcasecmp(n->value,"IS")) {
+					}else if (!strcmp(n->value,"=")) {
+						k = CMP_EQUALS;
+					}else if (!strcmp(n->value,"!=")) {
+						k = CMP_NOTEQUALS;
+					}else if (!strcasecmp(n->value,"IS")) {
+						if (!strcasecmp(n->next->value,"NOT") && n->next->next && !is_keyword(n->next->next->value)) {
+							k = CMP_NOTEQUALS;
+							n = n->next;
+						}else{
+							k = CMP_EQUALS;
+						}
+					}else if (!strcasecmp(n->value,"LIKE")) {
+						k = CMP_LIKE;
+					}else if (!strcasecmp(n->value,">")) {
+						k = CMP_GREATER;
+					}else if (!strcasecmp(n->value,">=")) {
+						k = CMP_GREATEROREQ;
+					}else if (!strcasecmp(n->value,"<")) {
+						k = CMP_LESS;
+					}else if (!strcasecmp(n->value,"<=")) {
+						k = CMP_LESSOREQ;
+					}else if (!strcasecmp(n->value,"IN")) {
+						k = CMP_IN;
+					}else if (!strcasecmp(n->value,"NOT")) {
+						if (n->next->next) {
+							if (!strcasecmp(n->next->value,"LIKE")) {
+								k = CMP_NOTLIKE;
+								n = n->next;
+							}else if (!strcasecmp(n->next->value,"IN")) {
+								k = CMP_NOTIN;
+								n = n->next;
+							}else{
+								k = CMP_NOTEQUALS;
+							}
+						}else{
+							k = CMP_NOTEQUALS;
+						}
+					}else{
 						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
-					nvp_add(&r->where,t->value,n->value);
+					l = nvp_add(&r->where,t->value,n->value);
+					l->num = k;
 					if (strchr(n->value,'%')) {
-						l = nvp_last(r->where);
 						remove_wildcard(buff,n->value);
-						nvp_add(&l->child,NULL,buff);
+						nvp_set(l,t->value,buff);
 					}
 					n = n->next;
 				}
@@ -670,7 +707,7 @@ void sql_load(result_t *r)
 	}
 
 	l = r->keywords->next;
-	if (strcmp(l->value,"DATA")) {
+	if (strcasecmp(l->value,"DATA")) {
 		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
@@ -1332,16 +1369,53 @@ void sql_update(result_t *r)
 					}else if (!n->next) {
 						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
-					}else if (strcmp(n->value,"=") && strcasecmp(n->value,"LIKE") && strcasecmp(n->value,"IS")) {
+					}else if (!strcmp(n->value,"=")) {
+						k = CMP_EQUALS;
+					}else if (!strcmp(n->value,"!=")) {
+						k = CMP_NOTEQUALS;
+					}else if (!strcasecmp(n->value,"IS")) {
+						if (!strcasecmp(n->next->value,"NOT") && n->next->next && !is_keyword(n->next->next->value)) {
+							k = CMP_NOTEQUALS;
+							n = n->next;
+						}else{
+							k = CMP_EQUALS;
+						}
+					}else if (!strcasecmp(n->value,"LIKE")) {
+						k = CMP_LIKE;
+					}else if (!strcasecmp(n->value,">")) {
+						k = CMP_GREATER;
+					}else if (!strcasecmp(n->value,">=")) {
+						k = CMP_GREATEROREQ;
+					}else if (!strcasecmp(n->value,"<")) {
+						k = CMP_LESS;
+					}else if (!strcasecmp(n->value,"<=")) {
+						k = CMP_LESSOREQ;
+					}else if (!strcasecmp(n->value,"IN")) {
+						k = CMP_IN;
+					}else if (!strcasecmp(n->value,"NOT")) {
+						if (n->next->next) {
+							if (!strcasecmp(n->next->value,"LIKE")) {
+								k = CMP_NOTLIKE;
+								n = n->next;
+							}else if (!strcasecmp(n->next->value,"IN")) {
+								k = CMP_NOTIN;
+								n = n->next;
+							}else{
+								k = CMP_NOTEQUALS;
+							}
+						}else{
+							k = CMP_NOTEQUALS;
+						}
+					}else{
 						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
-					nvp_add(&r->where,t->value,n->value);
+					l = nvp_add(&r->where,t->value,n->value);
+					l->num = k;
 					if (strchr(n->value,'%')) {
-						l = nvp_last(r->where);
 						remove_wildcard(buff,n->value);
-						nvp_add(&l->child,NULL,buff);
+						nvp_set(l,t->value,buff);
 					}
 					n = n->next;
 				}
@@ -1548,16 +1622,53 @@ void sql_delete(result_t *r)
 					}else if (!n->next) {
 						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
-					}else if (strcmp(n->value,"=") && strcasecmp(n->value,"LIKE") && strcasecmp(n->value,"IS")) {
+					}else if (!strcmp(n->value,"=")) {
+						k = CMP_EQUALS;
+					}else if (!strcmp(n->value,"!=")) {
+						k = CMP_NOTEQUALS;
+					}else if (!strcasecmp(n->value,"IS")) {
+						if (!strcasecmp(n->next->value,"NOT") && n->next->next && !is_keyword(n->next->next->value)) {
+							k = CMP_NOTEQUALS;
+							n = n->next;
+						}else{
+							k = CMP_EQUALS;
+						}
+					}else if (!strcasecmp(n->value,"LIKE")) {
+						k = CMP_LIKE;
+					}else if (!strcasecmp(n->value,">")) {
+						k = CMP_GREATER;
+					}else if (!strcasecmp(n->value,">=")) {
+						k = CMP_GREATEROREQ;
+					}else if (!strcasecmp(n->value,"<")) {
+						k = CMP_LESS;
+					}else if (!strcasecmp(n->value,"<=")) {
+						k = CMP_LESSOREQ;
+					}else if (!strcasecmp(n->value,"IN")) {
+						k = CMP_IN;
+					}else if (!strcasecmp(n->value,"NOT")) {
+						if (n->next->next) {
+							if (!strcasecmp(n->next->value,"LIKE")) {
+								k = CMP_NOTLIKE;
+								n = n->next;
+							}else if (!strcasecmp(n->next->value,"IN")) {
+								k = CMP_NOTIN;
+								n = n->next;
+							}else{
+								k = CMP_NOTEQUALS;
+							}
+						}else{
+							k = CMP_NOTEQUALS;
+						}
+					}else{
 						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
-					nvp_add(&r->where,t->value,n->value);
+					l = nvp_add(&r->where,t->value,n->value);
+					l->num = k;
 					if (strchr(n->value,'%')) {
-						l = nvp_last(r->where);
 						remove_wildcard(buff,n->value);
-						nvp_add(&l->child,NULL,buff);
+						nvp_set(l,t->value,buff);
 					}
 					n = n->next;
 				}

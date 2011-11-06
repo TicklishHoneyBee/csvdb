@@ -22,6 +22,7 @@ void result_where(result_t *r)
 {
 	int j;
 	int k;
+	int v;
 	int c = 0;
 	int hl = 0;
 	int lim = atoi(r->limit->next->value);
@@ -58,16 +59,89 @@ void result_where(result_t *r)
 		while (q) {
 			k = nvp_searchi(r->table->columns,q->name);
 			l = nvp_grabi(row->data,k);
-			if (l) {
-				if (strchr(q->value,'%') && q->child) {
-					if (!strcasestr(l->value,q->child->value))
-						j = 1;
-				}else{
-					if (!strcasestr(l->value,q->value))
-						j = 1;
+			switch (q->num) {
+			case CMP_EQUALS:
+				if (l) {
+					if (strcasecmp(l->value,q->value))
+							j = 1;
+				}else if (strcmp(q->value,"NULL")) {
+					j = 1;
 				}
-			}else if (strcmp(q->value,"NULL")) {
-				j = 1;
+				break;
+			case CMP_LIKE:
+				if (l) {
+					if (!strcasestr(l->value,q->value))
+							j = 1;
+				}else if (strcmp(q->value,"NULL")) {
+					j = 1;
+				}
+				break;
+			case CMP_LESS:
+				k = atoi(q->value);
+				if (l) {
+					v = atoi(l->value);
+				}else{
+					v = 0;
+				}
+				if (v >= k)
+					j = 1;
+				break;
+			case CMP_LESSOREQ:
+				k = atoi(q->value);
+				if (l) {
+					v = atoi(l->value);
+				}else{
+					v = 0;
+				}
+				if (v > k)
+					j = 1;
+				break;
+			case CMP_GREATER:
+				k = atoi(q->value);
+				if (l) {
+					v = atoi(l->value);
+				}else{
+					v = 0;
+				}
+				if (v <= k)
+					j = 1;
+				break;
+			case CMP_GREATEROREQ:
+				k = atoi(q->value);
+				if (l) {
+					v = atoi(l->value);
+				}else{
+					v = 0;
+				}
+				if (v < k)
+					j = 1;
+				break;
+			case CMP_IN:
+				printf("'IN' not currently supported, skipping \"%s\"\n",r->q);
+				break;
+			case CMP_NOTEQUALS:
+				if (l) {
+					if (!strcasecmp(l->value,q->value))
+							j = 1;
+				}else if (!strcmp(q->value,"NULL")) {
+					j = 1;
+				}
+				break;
+			case CMP_NOTLIKE:
+				if (l) {
+					if (strcasestr(l->value,q->value))
+							j = 1;
+				}else if (!strcmp(q->value,"NULL")) {
+					j = 1;
+				}
+				break;
+			case CMP_NOTIN:
+				printf("'IN' not currently supported, skipping \"%s\"\n",r->q);
+				break;
+			default:
+				printf("syntax error near '%s' in WHERE clause \"%s\"\n",q->name,r->q);
+				row_free_keys(r->result);
+				return;
 			}
 			q = q->next;
 		}
