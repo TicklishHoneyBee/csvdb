@@ -11,5 +11,6 @@ EXTRA_DIST += doc/csvdb-doc.html
 EXTRA_DIST += doc/queries
 EXTRA_DIST += test-unnamed.csv
 EXTRA_DIST += test.csv
+EXTRA_DIST += LICENSE
 
 fresh: clean all
