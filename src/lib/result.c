@@ -185,6 +185,84 @@ void result_where(result_t *r)
 	}
 }
 
+void result_having(result_t *r)
+{
+	int j;
+	int k;
+	int c = 0;
+	int cr;
+	int hl = 0;
+	int lim = atoi(r->limit->next->value);
+	int off = atoi(r->limit->value);
+	int tl = off+lim;
+	nvp_t *l;
+	nvp_t *q;
+	nvp_t *t;
+	row_t *ors = r->result;
+	row_t *row = r->result;
+	row_t *rw;
+	r->result = NULL;
+	if (lim > -1) {
+		hl = 1;
+		if (r->group) {
+			hl = 0;
+		}else if (r->order) {
+			hl = 0;
+		}else if (strncasecmp(r->q,"SELECT ",7)) {
+			hl = 0;
+		}else if (r->count) {
+			hl = 0;
+		}else{
+			l = r->cols;
+			while (l) {
+				if (nvp_search(l->child,"DISTINCT")) {
+					hl = 0;
+					break;
+				}
+				l = l->next;
+			}
+		}
+	}
+	while (row) {
+		j = 0;
+		q = r->having;
+		while (q) {
+			k = nvp_searchi(r->table->columns,q->name);
+			l = nvp_grabi(row->data,k);
+			cr = where_compare(r,row,q,l);
+			if (!cr) {
+				t = q->child;
+				while (t) {
+					k = nvp_searchi(r->table->columns,t->name);
+					l = nvp_grabi(row->data,k);
+					cr = where_compare(r,row,t,l);
+					if (cr)
+						break;
+					t = t->next;
+				}
+			}
+			if (!cr) {
+				j = 1;
+				break;
+			}
+			q = q->next;
+		}
+		if (!j) {
+			c++;
+			if (hl && c < off) {
+				row = row->next;
+				continue;
+			}
+			rw = row_add(&r->result,row->key);
+			rw->data = row->data;
+		}
+		if (hl && c == tl)
+			break;
+		row = row->next;
+	}
+	row_free_keys(ors);
+}
+
 void result_distinct(result_t *r)
 {
 	int j;

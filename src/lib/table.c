@@ -134,7 +134,6 @@ column_end:
 			}
 			if (!ccc) {
 				if (!b && fp == fl) {
-					printf("lines: %d\n",l);
 					break;
 				}
 				rw = row_add(att,key);

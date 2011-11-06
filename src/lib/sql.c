@@ -658,7 +658,106 @@ void sql_select(result_t *r)
 				n = q;
 				continue;
 			}else if (!strcasecmp(n->value,"HAVING")) {
-			/* TODO: HAVING */
+				wor = 0;
+				n = n->next;
+				while (n) {
+					if (!strcasecmp(n->value,"AND")) {
+						n = n->next;
+						wor = 0;
+						continue;
+					}else if (!strcasecmp(n->value,"OR")) {
+						n = n->next;
+						wor = 1;
+						continue;
+					}
+					t = nvp_search(r->table->columns,n->value);
+					if (!t) {
+						if (is_keyword(n->value))
+							break;
+						if ((c = strchr(n->value,'('))) {
+							*c = 0;
+							if (!strcasecmp(n->value,"COLUMN")) {
+								*c = '(';
+								if (get_column_id(buff,r,n->value))
+									return;
+								k = atoi(buff);
+								k--;
+								t = nvp_grabi(r->table->columns,k);
+							}
+							*c = '(';
+						}
+						if (!t) {
+							printf("unknown column '%s' in HAVING clause for table %s\n",n->value,r->table->name->value);
+							return;
+						}
+					}
+					n = n->next;
+					if (!n) {
+						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						return;
+					}else if (!n->next) {
+						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						return;
+					}else if (!strcmp(n->value,"=")) {
+						k = CMP_EQUALS;
+					}else if (!strcmp(n->value,"!=")) {
+						k = CMP_NOTEQUALS;
+					}else if (!strcasecmp(n->value,"IS")) {
+						if (!strcasecmp(n->next->value,"NOT") && n->next->next && !is_keyword(n->next->next->value)) {
+							k = CMP_NOTEQUALS;
+							n = n->next;
+						}else{
+							k = CMP_EQUALS;
+						}
+					}else if (!strcasecmp(n->value,"LIKE")) {
+						k = CMP_LIKE;
+					}else if (!strcasecmp(n->value,">")) {
+						k = CMP_GREATER;
+					}else if (!strcasecmp(n->value,">=")) {
+						k = CMP_GREATEROREQ;
+					}else if (!strcasecmp(n->value,"<")) {
+						k = CMP_LESS;
+					}else if (!strcasecmp(n->value,"<=")) {
+						k = CMP_LESSOREQ;
+					}else if (!strcasecmp(n->value,"IN")) {
+						k = CMP_IN;
+					}else if (!strcasecmp(n->value,"NOT")) {
+						if (n->next->next) {
+							if (!strcasecmp(n->next->value,"LIKE")) {
+								k = CMP_NOTLIKE;
+								n = n->next;
+							}else if (!strcasecmp(n->next->value,"IN")) {
+								k = CMP_NOTIN;
+								n = n->next;
+							}else{
+								k = CMP_NOTEQUALS;
+							}
+						}else{
+							k = CMP_NOTEQUALS;
+						}
+					}else{
+						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						return;
+					}
+					n = n->next;
+					if (wor) {
+						q = nvp_add(&l->child,t->value,n->value);
+						q->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(q,t->value,buff);
+						}
+					}else{
+						l = nvp_add(&r->having,t->value,n->value);
+						l->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(l,t->value,buff);
+						}
+					}
+					n = n->next;
+				}
+				continue;
 			}else if (!strcasecmp(n->value,"INTO") && n->next && n->next->next && !strcasecmp(n->next->value,"OUTFILE")) {
 				n = n->next->next;
 				of = n;
@@ -681,6 +780,8 @@ void sql_select(result_t *r)
 		result_order(r);
 	if (r->count)
 		result_count(r);
+	if (r->group && r->having)
+		result_having(r);
 	if (atoi(r->limit->value) > 0 || atoi(r->limit->next->value) > -1)
 		result_limit(r);
 	if (!(r->count && !r->group))
@@ -1844,6 +1945,7 @@ result_t *csvdb_query(char* q)
 	r->cols = NULL;
 	r->where = NULL;
 	r->group = NULL;
+	r->having = NULL;
 	r->order = NULL;
 	r->limit = NULL;
 	r->count = NULL;

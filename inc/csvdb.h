@@ -44,6 +44,7 @@ typedef struct result_s {
 	nvp_t *keywords;
 	nvp_t *where;
 	nvp_t *group;
+	nvp_t *having;
 	nvp_t *order;
 	nvp_t *limit;
 	nvp_t *count;
@@ -104,6 +105,7 @@ int csvdb_print_result(result_t *res);
 
 /* defined in result.c */
 void result_where(result_t *r);
+void result_having(result_t *r);
 void result_distinct(result_t *r);
 void result_group(result_t *r);
 void result_order(result_t *r);
