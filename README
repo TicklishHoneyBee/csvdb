@@ -13,11 +13,12 @@ csvdb requires the standard C and POSIX libraries. It has been tested
 
 INSTALL:
 If you're reading this then you've already unpacked the tarball,
-so it's the usual 4 steps:
+so it's the usual 5 steps:
 1) cd /path/to/csvdb
-2) make
-3) su -
-4) make install
+2) ./configure --with-readline
+3) make
+4) su -
+5) make install
 
 UNINSTALL:
 just cd to the csvdb directory and run "make uninstall"
@@ -52,3 +53,13 @@ CHANGES:
 0.2.1
 	- bugfix in file loading
 	- added DELETE
+0.3
+	- implemented autotools build chain
+	- increased file loading speed
+	- implemented readline based shell
+	- added table/file/column/keyword autocompletion to shell
+	- changes to table and result datastructures
+	- major query optimisations
+	- added AND/OR support to WHERE
+	- expanded WHERE to support =,LIKE,>,<,NOT,<=,>= comparisons
+	- implemented HAVING

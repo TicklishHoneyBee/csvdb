@@ -107,7 +107,8 @@ SELECT
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">select_expr</span> [, <span class="key">select_expr ...</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[FROM {<span class="key">table_reference</span> | <span class="key">file_reference</span>}
 &nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
-&nbsp;&nbsp;&nbsp;&nbsp;[GROUP BY {<span class="key">col_name</span> | <span class="key">expr</span>} [, <span class="key">...</span> ]]
+&nbsp;&nbsp;&nbsp;&nbsp;[GROUP BY {<span class="key">col_name</span> | <span class="key">expr</span>} [, <span class="key">...</span> ]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[HAVING <span class="key">where_condition</span>]]
 &nbsp;&nbsp;&nbsp;&nbsp;[ORDER BY {<span class="key">col_name</span> | <span class="key">expr</span>}
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[AS {INT | STRING}] [ASC | DESC], <span class="key">...</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[LIMIT {[<span class="key">offset</span>,] <span class="key">row_count</span> | <span class="key">row_count</span> OFFSET <span class="key">offset</span>}]
@@ -148,19 +149,17 @@ SELECT COLUMN(1) FROM mytable;
 SELECT columna FROM mytable AS t;
 </pre>
 
-<p><span class="key">where_condition</span> is currently limited to '=', LIKE, and IS comparisons only:</p>
+<p><span class="key">where_condition</span> is currently limited to comparisons between a column and a value only:</p>
 <pre>
 SELECT columna FROM mytable WHERE columnb = 'something';
 SELECT columna FROM mytable WHERE columnb LIKE 'something';
 SELECT columna FROM mytable WHERE columnb IS 'something';
-</pre>
-<p>The wildcard '%' can also be used to match part of a value:</p>
-<pre>
-SELECT columna FROM mytable WHERE columnb LIKE 'some%';
-</pre>
-<p>'%%' can be used to match a literal '%' character:</p>
-<pre>
-SELECT columna FROM mytable WHERE columnb = '100%%';
+SELECT columna FROM mytable WHERE columnb != 'something';
+SELECT columna FROM mytable WHERE columnb NOT LIKE 'something';
+SELECT columna FROM mytable WHERE columnc &lt; 3;
+SELECT columna FROM mytable WHERE columnc &gt; 3;
+SELECT columna FROM mytable WHERE columnc &lt;= 3;
+SELECT columna FROM mytable WHERE columnc &gt;= 3;
 </pre>
 <p>Enclosing values in single quotes, as shown above, is optional, the result is that comparison between columns is not supported.</p>
 <pre>
@@ -170,6 +169,19 @@ SELECT columna FROM mytable WHERE columnb = columna;
 <pre>
 SELECT columna FROM mytable WHERE columnb IS NULL;
 </pre>
+<p>The wildcard '%' can also be used to match part of a value:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb LIKE 'some%';
+</pre>
+<p>'%%' can be used to match a literal '%' character:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb = '100%%';
+</pre>
+<p>Multiple conditions can be used with AND/OR groupings:</p>
+<pre>
+SELECT columna FROM mytable WHERE columnb NOT LIKE 'something' AND columnc &lt; 3 OR columnc &gt; 6 AND columna IS NOT NULL;
+</pre>
+<p>This will return all results that match <span class="code">columnb NOT LIKE 'something'</span> and <span class="code">columna IS NOT NULL</span> and either <span class="code">columnc &lt; 3</span> or <span class="code">columnc &gt; 6</span></p>
 
 <p><span class="key">col_name</span> or <span class="key">expr</span> in ORDER BY and GROUP BY clauses can be the column's name, an alias as specified in a <span class="key">select_expr</span>, or a position reference using COLUMN(<span class="key">num</span>) where <span class="key">num</span> is a numeric value indicating the position of the column in the table.</p>
 <pre>
