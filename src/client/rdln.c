@@ -48,6 +48,19 @@ char *csvdb_histfile = NULL;
 /* completers */
 static char* cmd_generator(const char *UNUSED(text), int UNUSED(state))
 {
+	table_t *t = tables;
+	nvp_t *n;
+	size_t l = strlen(text);
+	while (t) {
+		n = t->name;
+		while (n) {
+			if (!strncmp(text,n->value,l)) {
+				return strdup(n->value);
+			}
+			n = n->next;
+		}
+		t = t->next;
+	}
 	/* if no names matched, then return NULL. */
 	return NULL;
 }

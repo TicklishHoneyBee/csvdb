@@ -51,6 +51,19 @@ typedef struct result_s {
 	unsigned int time;
 } result_t;
 
+/* used by WHERE */
+#define CMP_EQUALS	0
+#define CMP_LIKE	1
+#define CMP_LESS	2
+#define CMP_LESSOREQ	3
+#define CMP_GREATER	4
+#define CMP_GREATEROREQ	5
+#define CMP_IN		6
+#define CMP_NOTEQUALS	7
+#define CMP_NOTLIKE	8
+#define CMP_NOTIN	9
+
+
 /* defined in table.c */
 extern table_t *tables;
 table_t *table_add(void);
