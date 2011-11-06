@@ -51,6 +51,10 @@ static char* keywords[] = {
 	"DESCRIBE",
 	"SHOW",
 	"LOAD DATA INFILE",
+	NULL
+};
+
+static char* sub_keywords[] = {
 	"WITHOUT NAMES",
 	"APACHE",
 	"ALL",
@@ -116,9 +120,9 @@ static char** csvdb_comp(const char *text, int start, int UNUSED(end))
 
 	matches = (char**)NULL;
 
-	/* If this word is at the start of the line, then it is a command
-	   to complete.  Otherwise it is the name of a file in the current
-	   directory. */
+	/* If this word is at the start of the line, then it is a keyword
+	   to complete.  Otherwise it is either the name of a file in the current
+	   directory, a sub_keyword, or a table reference. */
 	if (!start) {
 		matches = rl_completion_matches(text, key_generator);
 	}else{
