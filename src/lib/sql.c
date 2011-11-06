@@ -248,10 +248,11 @@ void sql_select(result_t *r)
 	char buff[1024];
 	int k;
 	int lim1;
+	int wor = 0;
 	char* c;
 	char* c1;
 	char* c2;
-	nvp_t *l;
+	nvp_t *l = NULL;
 	nvp_t *t;
 	nvp_t *u;
 	nvp_t *of = NULL;
@@ -440,8 +441,15 @@ void sql_select(result_t *r)
 			}else if (!strcasecmp(n->value,"WHERE")) {
 				n = n->next;
 				while (n) {
-					if (!strcasecmp(n->value,"AND") || !strcasecmp(n->value,"OR"))
+					if (!strcasecmp(n->value,"AND")) {
+						n = n->next;
+						wor = 0;
 						continue;
+					}else if (!strcasecmp(n->value,"OR")) {
+						n = n->next;
+						wor = 1;
+						continue;
+					}
 					t = nvp_search(r->table->columns,n->value);
 					if (!t) {
 						if (is_keyword(n->value))
@@ -520,11 +528,20 @@ void sql_select(result_t *r)
 						return;
 					}
 					n = n->next;
-					l = nvp_add(&r->where,t->value,n->value);
-					l->num = k;
-					if (strchr(n->value,'%')) {
-						remove_wildcard(buff,n->value);
-						nvp_set(l,t->value,buff);
+					if (wor) {
+						q = nvp_add(&l->child,t->value,n->value);
+						q->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(q,t->value,buff);
+						}
+					}else{
+						l = nvp_add(&r->where,t->value,n->value);
+						l->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(l,t->value,buff);
+						}
 					}
 					n = n->next;
 				}
@@ -1184,6 +1201,7 @@ void sql_update(result_t *r)
 	char* v;
 	char* qu;
 	int k;
+	int wor = 0;
 	char buff[1024];
 	char cbuff[1024];
 	int ign = 0;
@@ -1339,8 +1357,15 @@ void sql_update(result_t *r)
 			}else if (!strcasecmp(n->value,"WHERE")) {
 				n = n->next;
 				while (n) {
-					if (!strcasecmp(n->value,"AND") || !strcasecmp(n->value,"OR"))
+					if (!strcasecmp(n->value,"AND")) {
+						n = n->next;
+						wor = 0;
 						continue;
+					}else if (!strcasecmp(n->value,"OR")) {
+						n = n->next;
+						wor = 1;
+						continue;
+					}
 					t = nvp_search(r->table->columns,n->value);
 					if (!t) {
 						if (is_keyword(n->value))
@@ -1411,11 +1436,20 @@ void sql_update(result_t *r)
 						return;
 					}
 					n = n->next;
-					l = nvp_add(&r->where,t->value,n->value);
-					l->num = k;
-					if (strchr(n->value,'%')) {
-						remove_wildcard(buff,n->value);
-						nvp_set(l,t->value,buff);
+					if (wor) {
+						q = nvp_add(&l->child,t->value,n->value);
+						q->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(q,t->value,buff);
+						}
+					}else{
+						l = nvp_add(&r->where,t->value,n->value);
+						l->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(l,t->value,buff);
+						}
 					}
 					n = n->next;
 				}
@@ -1532,6 +1566,7 @@ void sql_delete(result_t *r)
 	nvp_t *q;
 	row_t *row;
 	row_t *rw;
+	int wor = 0;
 	char* c;
 	int k;
 	char buff[1024];
@@ -1592,8 +1627,15 @@ void sql_delete(result_t *r)
 			}else if (!strcasecmp(n->value,"WHERE")) {
 				n = n->next;
 				while (n) {
-					if (!strcasecmp(n->value,"AND") || !strcasecmp(n->value,"OR"))
+					if (!strcasecmp(n->value,"AND")) {
+						n = n->next;
+						wor = 0;
 						continue;
+					}else if (!strcasecmp(n->value,"OR")) {
+						n = n->next;
+						wor = 1;
+						continue;
+					}
 					t = nvp_search(r->table->columns,n->value);
 					if (!t) {
 						if (is_keyword(n->value))
@@ -1664,11 +1706,20 @@ void sql_delete(result_t *r)
 						return;
 					}
 					n = n->next;
-					l = nvp_add(&r->where,t->value,n->value);
-					l->num = k;
-					if (strchr(n->value,'%')) {
-						remove_wildcard(buff,n->value);
-						nvp_set(l,t->value,buff);
+					if (wor) {
+						q = nvp_add(&l->child,t->value,n->value);
+						q->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(q,t->value,buff);
+						}
+					}else{
+						l = nvp_add(&r->where,t->value,n->value);
+						l->num = k;
+						if (strchr(n->value,'%')) {
+							remove_wildcard(buff,n->value);
+							nvp_set(l,t->value,buff);
+						}
 					}
 					n = n->next;
 				}
