@@ -217,6 +217,7 @@ void result_order(result_t *r)
 						}
 					}else{
 						l = row_add(&trs,q->key);
+						l->data = q->data;
 					}
 					q = q->next;
 				}
@@ -245,6 +246,7 @@ void result_order(result_t *r)
 						}
 					}else{
 						l = row_add(&trs,q->key);
+						l->data = q->data;
 					}
 					q = q->next;
 				}
@@ -275,6 +277,7 @@ void result_order(result_t *r)
 						}
 					}else{
 						l = row_add(&trs,q->key);
+						l->data = q->data;
 					}
 					q = q->next;
 				}
@@ -303,6 +306,7 @@ void result_order(result_t *r)
 						}
 					}else{
 						l = row_add(&trs,q->key);
+						l->data = q->data;
 					}
 					q = q->next;
 				}
