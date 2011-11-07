@@ -108,6 +108,8 @@ table_t *table_load_apache(char* file)
 					b--;
 				}else{
 					tm = 0;
+					if (b < 1023)
+						buff[b++] = c;
 					goto column_end;
 				}
 			}else if (c == '\n') {
@@ -118,7 +120,6 @@ table_t *table_load_apache(char* file)
 			continue;
 		}else if (!b && c == '[') {
 			tm = 1;
-			continue;
 		}else if (!b && c != '\n' && isspace(c)) {
 			continue;
 		}else if (c == ' ' || c == '\n') {

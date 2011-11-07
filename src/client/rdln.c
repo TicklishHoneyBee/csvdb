@@ -73,6 +73,9 @@ static char* sub_keywords[] = {
 	"TABLES",
 	"COLUMNS",
 	"FILE",
+	"DATA INFILE",
+	"INFILE",
+	"OUTFILE",
 	NULL
 };
 

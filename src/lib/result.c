@@ -80,7 +80,7 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 			return 0;
 		break;
 	case CMP_IN:
-		printf("'IN' not currently supported, skipping \"%s\"\n",r->q);
+		error(r,CSVDB_ERROR_UNSUPPORTED,"'IN' not currently supported, skipping \"%s\"\n",r->q);
 		break;
 	case CMP_NOTEQUALS:
 		if (l) {
@@ -99,10 +99,10 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 		}
 		break;
 	case CMP_NOTIN:
-		printf("'IN' not currently supported, skipping \"%s\"\n",r->q);
+		error(r,CSVDB_ERROR_UNSUPPORTED,"'IN' not currently supported, skipping \"%s\"\n",r->q);
 		return 0;
 	default:
-		printf("syntax error near '%s' in WHERE clause \"%s\"\n",q->name,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' in WHERE clause \"%s\"\n",q->name,r->q);
 		row_free_keys(r->result);
 		return 0;
 	}

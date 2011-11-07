@@ -91,7 +91,7 @@ int get_column_id(char* buff, result_t *r, char* str)
 		*nve = 0;
 	k = atoi(nv);
 	if (k < 0 || !nvp_grabi(r->table->columns,k-1)) {
-		printf("'COLUMN(%d)' is out of range in %s\r\n",k,r->table->name->value);
+		error(r,CSVDB_ERROR_OUTOFRANGE,"'COLUMN(%d)' is out of range in %s\r\n",k,r->table->name->value);
 		return 1;
 	}
 	sprintf(buff,"%d",k);
@@ -104,59 +104,119 @@ int csvdb_print_result(result_t *res)
 {
 	row_t *row;
 	nvp_t *col;
+	nvp_t *c;
 	nvp_t *t;
 	row_t *r;
+	int l;
 	float tm;
+	char* v;
 	char* s = "";
 	int rc;
 	if (!res) {
-		printf("invalid result set\r\n");
+		printf("invalid result set\n");
 		return -1;
 	}
+	tm = (float)res->time/1000.0;
 	r = res->result;
 	rc = row_count(r);
 	if (rc != 1)
 		s = "s";
+
+	if (res->error) {
+		t = res->error;
+		while (t) {
+			printf("%d: %s",t->num,t->value);
+			t = t->next;
+		}
+	}
 
 	if (!rc) {
 		if (res->ar) {
 			s = "";
 			if (res->ar != 1)
 				s = "s";
-			tm = (float)res->time/1000.0;
-			printf("-----\r\n%d row%s affected in %.3f seconds\r\n\r\n",res->ar,s,tm);
+			printf("-----\n%d row%s affected in %.3f seconds\n\n",res->ar,s,tm);
 			return res->ar;
 		}
-		printf("0 row%s returned\r\n",s);
+		printf("0 row%s returned\n",s);
 		return 0;
 	}
-	col = res->cols;
-	while (col) {
-		t = nvp_search(col->child,"AS");
-		if (!t || !t->next) {
-			printf(" %s",col->value);
-		}else{
-			printf(" %s",t->next->value);
-		}
-		col = col->next;
-	}
-	printf("\r\n");
 
-	row = r;
-	while (row) {
-		col = row->data;
+	if (!res->error) {
+		printf("formatting results...\n");
+		col = res->cols;
 		while (col) {
-			if (col->prev) {
-				printf(" | %s",col->value);
+			col->num = strlen(col->value);
+			col = col->next;
+		}
+		row = r;
+		while (row) {
+			col = row->data;
+			c = res->cols;
+			while (col && c) {
+				l = strlen(col->value);
+				if (l > c->num)
+					c->num = l;
+				col = col->next;
+				c = c->next;
+			}
+			row = row->next;
+		}
+		col = res->cols;
+		l = 0;
+		while (col) {
+			l += col->num+3;
+			col = col->next;
+		}
+		l++;
+		v = alloca(sizeof(char)*(l+1));
+		memset(v,'-',l);
+		v[l] = '\0';
+
+		puts(v);
+		col = res->cols;
+		while (col) {
+			t = nvp_search(col->child,"AS");
+			if (!t || !t->next) {
+				printf("| %*s ",col->num,col->value);
 			}else{
-				printf("%s",col->value);
+				printf("| %*s ",col->num,t->next->value);
 			}
 			col = col->next;
 		}
-		printf("\r\n");
-		row = row->next;
+		printf("|\n");
+		puts(v);
+
+		row = r;
+		while (row) {
+			col = row->data;
+			c = res->cols;
+			while (col && c) {
+				printf("| %*s ",c->num,col->value);
+				col = col->next;
+				c = c->next;
+			}
+			printf("|\n");
+			row = row->next;
+		}
+		puts(v);
 	}
-	tm = (float)res->time/1000.0;
-	printf("-----\r\n%d row%s returned in %.3f seconds\r\n\r\n",rc,s,tm);
+
+	printf("%d row%s returned in %.3f seconds\n\n",rc,s,tm);
+
 	return rc;
+}
+
+void error(result_t *r, int err, char* str, ...)
+{
+	va_list ap;
+	char buff[1024];
+	nvp_t *n;
+
+	va_start(ap, str);
+	vsnprintf(buff, 1024, str, ap);
+	va_end(ap);
+
+	n = nvp_add(&r->error,NULL,buff);
+	n->num = err;
 }

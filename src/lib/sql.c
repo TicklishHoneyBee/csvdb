@@ -100,7 +100,7 @@ void sql_describe(result_t *r)
 	row_t *row;
 	nvp_add(&r->cols,NULL,"name");
 	if (!r->keywords->next) {
-		printf("syntax error near '%s': \"%s\"\n",r->keywords->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",r->keywords->value,r->q);
 		return;
 	}else if (!strcasecmp(r->keywords->next->value,"FILE")) {
 		r->table = tables;
@@ -109,7 +109,7 @@ void sql_describe(result_t *r)
 	}
 
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",r->keywords->next->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",r->keywords->next->value);
 		return;
 	}
 
@@ -128,12 +128,12 @@ void sql_show_columns(result_t *r)
 	nvp_t *n = r->keywords->next;
 	nvp_add(&r->cols,NULL,"name");
 	if (!n->next || strcasecmp(n->next->value,"FROM")) {
-		printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
 	}
 	n = n->next;
 	if (!n->next) {
-		printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
 	}
 	n = n->next;
@@ -144,7 +144,7 @@ void sql_show_columns(result_t *r)
 	}
 
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",n->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 
@@ -166,7 +166,7 @@ void sql_show_tables(result_t *r)
 	char* cv = NULL;
 	if (nvp_count(r->keywords) < 2) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = r->keywords->next;
@@ -178,7 +178,7 @@ void sql_show_tables(result_t *r)
 		if (l->next && !strcasecmp(l->next->value,"LIKE")) {
 			l = l->next;
 			if (!l->next) {
-				printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 				return;
 			}
 			l = l->next;
@@ -216,7 +216,7 @@ table_name_found:
 			t = t->next;
 		}
 	}else{
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 }
@@ -227,7 +227,7 @@ void sql_show(result_t *r)
 	nvp_t *l;
 	if (nvp_count(r->keywords) < 2) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = r->keywords->next;
@@ -237,7 +237,7 @@ void sql_show(result_t *r)
 	}else if (!strcasecmp(l->value,"COLUMNS")) {
 		sql_show_columns(r);
 	}else{
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 }
@@ -259,11 +259,11 @@ void sql_select(result_t *r)
 	nvp_t *n = r->keywords;
 	nvp_t *q = nvp_search(r->keywords,"FROM");
 	if (!q) {
-		printf("no table or file specified: \"%s\"\n",r->q);
+		error(r,CSVDB_ERROR_TABLEREF,"no table or file specified: \"%s\"\n",r->q);
 		return;
 	}
 	if (!q->next) {
-		printf("syntax error near '%s': \"%s\"\n",q->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",q->value,r->q);
 		return;
 	}
 
@@ -275,7 +275,7 @@ void sql_select(result_t *r)
 		r->table = table_load_csv(q->value,NULL);
 	}
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",q->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",q->value);
 		return;
 	}
 
@@ -326,7 +326,7 @@ void sql_select(result_t *r)
 					c2 = strchr(c1,')');
 					if (!c2) {
 						*c = '(';
-						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
 					}
 					if (*(c2+1) == ')')
@@ -366,7 +366,7 @@ void sql_select(result_t *r)
 							}
 						}
 						if (!q) {
-							printf("unknown column '%s' in COUNT for table %s\n",c1,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in COUNT for table %s\n",c1,r->table->name->value);
 							return;
 						}
 					}
@@ -400,7 +400,7 @@ void sql_select(result_t *r)
 			continue;
 		}
 		if (!nvp_search(r->table->columns,n->value)) {
-			printf("unknown column '%s' in %s\n",n->value,r->table->name->value);
+			error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in %s\n",n->value,r->table->name->value);
 			return;
 		}
 		nvp_add(&r->cols,NULL,n->value);
@@ -420,7 +420,7 @@ void sql_select(result_t *r)
 				l = n;
 				n = n->next;
 				if (!n) {
-					printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 					return;
 				}
 				nvp_set(r->limit->next,NULL,n->value);
@@ -475,16 +475,16 @@ void sql_select(result_t *r)
 							q = q->next;
 						}
 						if (!t) {
-							printf("unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_SYNTAX,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
 					n = n->next;
 					if (!n) {
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}else if (!n->next) {
-						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
 					}else if (!strcmp(n->value,"=")) {
 						k = CMP_EQUALS;
@@ -524,7 +524,7 @@ void sql_select(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
@@ -549,7 +549,7 @@ void sql_select(result_t *r)
 			}else if (!strcasecmp(n->value,"GROUP") && n->next && !strcasecmp(n->next->value,"BY")) {
 				q = n->next->next;
 				if (!q) {
-					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
 				while (q) {
@@ -582,7 +582,7 @@ void sql_select(result_t *r)
 							u = u->next;
 						}
 						if (!t) {
-							printf("unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
@@ -594,7 +594,7 @@ void sql_select(result_t *r)
 			}else if (!strcasecmp(n->value,"ORDER") && n->next && !strcasecmp(n->next->value,"BY")) {
 				q = n->next->next;
 				if (!q) {
-					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
 				while (q) {
@@ -627,7 +627,7 @@ void sql_select(result_t *r)
 							u = u->next;
 						}
 						if (!t) {
-							printf("unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
@@ -638,13 +638,13 @@ void sql_select(result_t *r)
 						if (!strcasecmp(q->value,"AS")) {
 							q = q->next;
 							if (!q) {
-								printf("syntax error near 'AS': \"%s\"\n",r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'AS': \"%s\"\n",r->q);
 								return;
 							}
 							if (!strcasecmp(q->value,"INT")) {
 								nvp_add(&t->child,NULL,q->value);
 							}else if (strcasecmp(q->value,"STRING")) {
-								printf("syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
 								return;
 							}
 						}else if (!strcasecmp(q->value,"DESC")) {
@@ -687,16 +687,16 @@ void sql_select(result_t *r)
 							*c = '(';
 						}
 						if (!t) {
-							printf("unknown column '%s' in HAVING clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in HAVING clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
 					n = n->next;
 					if (!n) {
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}else if (!n->next) {
-						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
 					}else if (!strcmp(n->value,"=")) {
 						k = CMP_EQUALS;
@@ -736,7 +736,7 @@ void sql_select(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
@@ -762,11 +762,11 @@ void sql_select(result_t *r)
 				n = n->next->next;
 				of = n;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-				printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 				return;
 			}
 		}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-			printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+			error(r,CSVDB_ERROR_SUBQUERY,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 			return;
 		}
 		n = n->next;
@@ -792,7 +792,7 @@ void sql_select(result_t *r)
 		FILE *f;
 		if (strcmp(of->value,"-") && (f = fopen(of->value,"r"))) {
 			fclose(f);
-			printf("file '%s' already exists\n",of->value);
+			error(r,CSVDB_ERROR_FILEEXISTS,"file '%s' already exists\n",of->value);
 		}else{
 			t = result_to_table(r,of->value);
 			table_write(t,of->value);
@@ -820,19 +820,19 @@ void sql_load(result_t *r)
 	nvp_t *ocols = NULL;
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
 	l = r->keywords->next;
 	if (strcasecmp(l->value,"DATA")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
 	l = l->next;
 	if (strcmp(l->value,"INFILE")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
@@ -840,7 +840,7 @@ void sql_load(result_t *r)
 	if (!strcmp(l->value,"WITHOUT")) {
 		l = l->next;
 		if (strcmp(l->value,"NAMES")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		un = 1;
@@ -849,7 +849,7 @@ void sql_load(result_t *r)
 		l = l->next;
 		t = table_load_csv(f->value,NULL);
 		if (!t) {
-			printf("invalid table or file referred to in '%s'\n",f->value);
+			error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",f->value);
 			return;
 		}
 		i = nvp_count(t->columns);
@@ -862,7 +862,7 @@ void sql_load(result_t *r)
 		ap = 1;
 		l = l->next;
 		if (!l->next) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		f = l;
@@ -874,7 +874,7 @@ void sql_load(result_t *r)
 
 	if (l && !strcasecmp(l->value,"AS")) {
 		if (!l->next) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
@@ -884,12 +884,12 @@ void sql_load(result_t *r)
 
 	if (l && !strcasecmp(l->value,"INTO")) {
 		if (!l->next) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 		if (!l->next || strcasecmp(l->value,"TABLE")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
@@ -910,7 +910,7 @@ void sql_load(result_t *r)
 		}else{
 			while (go) {
 				if (!u) {
-					printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 					return;
 				}
 				sprintf(buff,"%s",u->value);
@@ -939,7 +939,7 @@ void sql_load(result_t *r)
 		t = table_load_csv(f->value,cols);
 	}
 	if (!t) {
-		printf("invalid table or file referred to in '%s'\n",f->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",f->value);
 		return;
 	}
 
@@ -966,7 +966,7 @@ void sql_drop(result_t *r)
 	nvp_t *f = NULL;
 	if (nvp_count(r->keywords) < 3) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
@@ -979,7 +979,7 @@ void sql_drop(result_t *r)
 	}
 
 	if (strcasecmp(l->value,"TABLE")) {
-		printf("tsyntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
@@ -989,17 +989,17 @@ void sql_drop(result_t *r)
 
 	if (l) {
 		if (strcmp(l->value,"IF")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 		if (strcmp(l->value,"EXISTS")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 		if (l) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		i = 1;
@@ -1008,14 +1008,14 @@ void sql_drop(result_t *r)
 	t = table_find(f->value);
 	if (!t) {
 		if (!i)
-			printf("no such table '%s': \"%s\"\n",f->value,r->q);
+			error(r,CSVDB_ERROR_TABLEREF,"no such table '%s': \"%s\"\n",f->value,r->q);
 		return;
 	}
 
 	if (p) {
 		errno = 0;
 		if (unlink(t->name->value) < 0) {
-			printf("could not permanently drop table file (errno %d)\n",errno);
+			error(r,CSVDB_ERROR_FILEREF,"could not permanently drop table file (errno %d)\n",errno);
 		}
 	}
 
@@ -1030,25 +1030,25 @@ void sql_alias(result_t *r)
 	table_t *t;
 	if (nvp_count(r->keywords) < 5) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = r->keywords->next;
 	if (strcasecmp(l->value,"TABLE")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	n = l;
 	l = l->next;
 	if (strcasecmp(l->value,"AS")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	t = table_find(n->value);
 	if (!t) {
-		printf("invalid table or file referred to in '%s'\n",n->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 	while (l) {
@@ -1056,7 +1056,7 @@ void sql_alias(result_t *r)
 		l = l->next;
 		if (l) {
 			if (strcmp(l->value,",")) {
-				printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 				return;
 			}
 			l = l->next;
@@ -1079,7 +1079,7 @@ void sql_create(result_t *r)
 	r->keywords = sql_split(b,1);
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = r->keywords->next;
@@ -1087,40 +1087,40 @@ void sql_create(result_t *r)
 		l = l->next;
 
 	if (strcasecmp(l->value,"TABLE")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	if (!strcasecmp(l->value,"IF")) {
 		if (!l->next || strcasecmp(l->next->value,"NOT")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 		if (!l->next || strcasecmp(l->next->value,"EXISTS")) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 		ine = 1;
 		if (!l->next) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
 	}
 	n = l;
 	if (!l->next) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	if (strcmp(l->value,"(")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}else{
 		if (!l->next) {
-			printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 			return;
 		}
 		l = l->next;
@@ -1128,7 +1128,7 @@ void sql_create(result_t *r)
 
 	t = table_add();
 	if (!t) {
-		printf("internal error creating table %s\n",n->value);
+		error(r,CSVDB_ERROR_INTERNAL,"internal error creating table %s\n",n->value);
 		return;
 	}
 	nvp_add(&t->name,NULL,n->value);
@@ -1176,7 +1176,7 @@ void sql_insert(result_t *r)
 	r->keywords = sql_split(b,1);
 	if (nvp_count(r->keywords) < 7) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = r->keywords->next;
@@ -1185,14 +1185,14 @@ void sql_insert(result_t *r)
 		l = l->next;
 	}
 	if (strcasecmp(l->value,"INTO")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	n = l;
 	r->table = table_load_csv(n->value,NULL);
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",n->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 	l = l->next;
@@ -1212,19 +1212,19 @@ void sql_insert(result_t *r)
 	}
 end_cols:
 	if (!l) {
-		printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
 	}
 	l = l->next;
 	if (!l) {
-		printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
 	}else if (strcasecmp(l->value,"VALUES") && strcasecmp(l->value,"VALUE")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	if (!l->next || strcmp(l->next->value,"(")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next->next;
@@ -1232,7 +1232,7 @@ end_cols:
 	while (l) {
 		row = row_add(&r->result,0);
 		if (!row) {
-			printf("internal error inserting values into table %s\n",n->value);
+			error(r,CSVDB_ERROR_INTERNAL,"internal error inserting values into table %s\n",n->value);
 			return;
 		}
 		nvp_add(&row->data,NULL,l->value);
@@ -1308,7 +1308,7 @@ void sql_update(result_t *r)
 	int ign = 0;
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
@@ -1323,12 +1323,12 @@ void sql_update(result_t *r)
 	n = l;
 	r->table = table_load_csv(n->value,NULL);
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",n->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 	l = l->next;
 	if (!l->next || strcasecmp(l->value,"SET")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
@@ -1368,14 +1368,14 @@ void sql_update(result_t *r)
 		}else{
 			l = l->next;
 			if (!l) {
-				printf("syntax error near '%s': \"%s\"\n",c,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",c,r->q);
 				return;
 			}
 			if (!b) {
 				if (!strcmp(l->value,"=")) {
 					l = l->next;
 					if (!l) {
-						printf("syntax error near '%s': \"%s\"\n",c,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",c,r->q);
 						return;
 					}
 					strcpy(buff,l->value);
@@ -1421,7 +1421,7 @@ void sql_update(result_t *r)
 				*b = '(';
 			}
 			if (!t) {
-				printf("unknown column '%s' for table %s\n",l->value,r->table->name->value);
+				error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' for table %s\n",l->value,r->table->name->value);
 				return;
 			}
 		}
@@ -1437,7 +1437,7 @@ void sql_update(result_t *r)
 				l = n;
 				n = n->next;
 				if (!n) {
-					printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 					return;
 				}
 				nvp_set(r->limit->next,NULL,n->value);
@@ -1484,16 +1484,16 @@ void sql_update(result_t *r)
 							*c = '(';
 						}
 						if (!t) {
-							printf("unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
 					n = n->next;
 					if (!n) {
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}else if (!n->next) {
-						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
 					}else if (!strcmp(n->value,"=")) {
 						k = CMP_EQUALS;
@@ -1533,7 +1533,7 @@ void sql_update(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
@@ -1558,7 +1558,7 @@ void sql_update(result_t *r)
 			}else if (!strcasecmp(n->value,"ORDER") && n->next && !strcasecmp(n->next->value,"BY")) {
 				q = n->next->next;
 				if (!q) {
-					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
 				while (q) {
@@ -1583,7 +1583,7 @@ void sql_update(result_t *r)
 							*c = '(';
 						}
 						if (!t) {
-							printf("unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
@@ -1594,13 +1594,13 @@ void sql_update(result_t *r)
 						if (!strcasecmp(q->value,"AS")) {
 							q = q->next;
 							if (!q) {
-								printf("syntax error near 'AS': \"%s\"\n",r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'AS': \"%s\"\n",r->q);
 								return;
 							}
 							if (!strcasecmp(q->value,"INT")) {
 								nvp_add(&t->child,NULL,q->value);
 							}else if (strcasecmp(q->value,"STRING")) {
-								printf("syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",q->value,r->q);
 								return;
 							}
 						}else if (!strcasecmp(q->value,"DESC")) {
@@ -1614,11 +1614,11 @@ void sql_update(result_t *r)
 				n = q;
 				continue;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-				printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 				return;
 			}
 		}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-			printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 			return;
 		}
 		n = n->next;
@@ -1638,14 +1638,14 @@ void sql_update(result_t *r)
 		t = r->cols;
 		row = row_search(r->table->rows,rw->key);
 		if (!row) {
-			printf("internal error in update for table %s\n",r->table->name->value);
+			error(r,CSVDB_ERROR_INTERNAL,"internal error in update for table %s\n",r->table->name->value);
 			goto end_update;
 		}
 		while (t) {
 			k = nvp_searchi(r->table->columns,t->value);
 			l = nvp_grabi(row->data,k);
 			if (!l) {
-				printf("unknown column '%s' for table %s\n",t->value,r->table->name->value);
+				error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' for table %s\n",t->value,r->table->name->value);
 				goto end_update;
 			}
 			nvp_set(l,NULL,t->name);
@@ -1674,7 +1674,7 @@ void sql_delete(result_t *r)
 	int ign = 0;
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 
@@ -1688,14 +1688,14 @@ void sql_delete(result_t *r)
 	}
 
 	if (strcasecmp(l->value,"FROM")) {
-		printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
 	l = l->next;
 	n = l;
 	r->table = table_load_csv(n->value,NULL);
 	if (!r->table) {
-		printf("invalid table or file referred to in '%s'\n",n->value);
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 	l = l->next;
@@ -1707,7 +1707,7 @@ void sql_delete(result_t *r)
 				l = n;
 				n = n->next;
 				if (!n) {
-					printf("syntax error near '%s': \"%s\"\n",l->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 					return;
 				}
 				nvp_set(r->limit->next,NULL,n->value);
@@ -1754,16 +1754,16 @@ void sql_delete(result_t *r)
 							*c = '(';
 						}
 						if (!t) {
-							printf("unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
 					n = n->next;
 					if (!n) {
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}else if (!n->next) {
-						printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 						return;
 					}else if (!strcmp(n->value,"=")) {
 						k = CMP_EQUALS;
@@ -1803,7 +1803,7 @@ void sql_delete(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						printf("syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
 						return;
 					}
 					n = n->next;
@@ -1828,7 +1828,7 @@ void sql_delete(result_t *r)
 			}else if (!strcasecmp(n->value,"ORDER") && n->next && !strcasecmp(n->next->value,"BY")) {
 				q = n->next->next;
 				if (!q) {
-					printf("syntax error near '%s': \"%s\"\n",n->next->value,r->q);
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->next->value,r->q);
 					return;
 				}
 				while (q) {
@@ -1853,7 +1853,7 @@ void sql_delete(result_t *r)
 							*c = '(';
 						}
 						if (!t) {
-							printf("unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
 							return;
 						}
 					}
@@ -1864,13 +1864,13 @@ void sql_delete(result_t *r)
 						if (!strcasecmp(q->value,"AS")) {
 							q = q->next;
 							if (!q) {
-								printf("syntax error near 'AS': \"%s\"\n",r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'AS': \"%s\"\n",r->q);
 								return;
 							}
 							if (!strcasecmp(q->value,"INT")) {
 								nvp_add(&t->child,NULL,q->value);
 							}else if (strcasecmp(q->value,"STRING")) {
-								printf("syntax error near unknown token '%s': \"%s\"\n",q->value,r->q);
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",q->value,r->q);
 								return;
 							}
 						}else if (!strcasecmp(q->value,"DESC")) {
@@ -1884,11 +1884,11 @@ void sql_delete(result_t *r)
 				n = q;
 				continue;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-				printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 				return;
 			}
 		}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
-			printf("syntax error near '%s': \"%s\"\n",n->value,r->q);
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 			return;
 		}
 		n = n->next;
@@ -1910,7 +1910,7 @@ void sql_delete(result_t *r)
 				rw = rw->next;
 				continue;
 			}
-			printf("internal error in delete for table %s\n",r->table->name->value);
+			error(r,CSVDB_ERROR_INTERNAL,"internal error in delete for table %s\n",r->table->name->value);
 			goto end_delete;
 		}
 		r->ar++;
@@ -1950,9 +1950,10 @@ result_t *csvdb_query(char* q)
 	r->limit = NULL;
 	r->count = NULL;
 	r->result = NULL;
+	r->error = NULL;
 
 	if (!r->keywords) {
-		printf("invalid query: \"%s\"\n",r->q);
+		error(r,CSVDB_ERROR_SYNTAX,"invalid query: \"%s\"\n",r->q);
 		return r;
 	}
 
@@ -1977,7 +1978,7 @@ result_t *csvdb_query(char* q)
 	}else if (!strcasecmp(r->keywords->value,"CREATE")) {
 		sql_create(r);
 	}else{
-		printf("unknown keyword '%s'\n",r->keywords->value);
+		error(r,CSVDB_ERROR_SYNTAX,"unknown keyword '%s'\n",r->keywords->value);
 	}
 
 	r->time = (ticks()-r->time);

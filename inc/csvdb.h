@@ -49,6 +49,7 @@ typedef struct result_s {
 	nvp_t *limit;
 	nvp_t *count;
 	row_t *result;
+	nvp_t *error;
 	unsigned int time;
 } result_t;
 
@@ -64,6 +65,17 @@ typedef struct result_s {
 #define CMP_NOTLIKE	8
 #define CMP_NOTIN	9
 
+#define CSVDB_ERROR_NONE	0
+#define CSVDB_ERROR_INTERNAL	1
+#define CSVDB_ERROR_SYNTAX	2
+#define CSVDB_ERROR_TABLEREF	3
+#define CSVDB_ERROR_COLUMNREF	4
+#define CSVDB_ERROR_FILEREF	5
+#define CSVDB_ERROR_FILEEXISTS	6
+#define CSVDB_ERROR_UNSUPPORTED	7
+#define CSVDB_ERROR_OUTOFRANGE	8
+#define CSVDB_ERROR_BADRESULT	9
+#define CSVDB_ERROR_SUBQUERY	10
 
 /* defined in table.c */
 extern table_t *tables;
@@ -102,6 +114,7 @@ int is_numeric(char* w);
 int remove_wildcard(char* buff, char* str);
 int get_column_id(char* buff, result_t *r, char* str);
 int csvdb_print_result(result_t *res);
+void error(result_t *r, int err, char* str, ...);
 
 /* defined in result.c */
 void result_where(result_t *r);
