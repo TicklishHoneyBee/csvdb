@@ -541,7 +541,7 @@ void result_count(result_t *r)
 				}
 				q = q->next;
 			}
-			row_free_all(r->result);
+			row_free_keys(r->result);
 			r->result = row_create(0);
 			r->result->data = nvp_create(NULL,buff);
 		}else{
