@@ -207,13 +207,21 @@ void result_having(result_t *r)
 		q = r->having;
 		while (q) {
 			k = nvp_searchi(r->table->columns,q->name);
-			l = nvp_grabi(row->data,k);
+			if (k < 0 && r->count) {
+				l = nvp_last(row->data);
+			}else{
+				l = nvp_grabi(row->data,k);
+			}
 			cr = where_compare(r,row,q,l);
 			if (!cr) {
 				t = q->child;
 				while (t) {
 					k = nvp_searchi(r->table->columns,t->name);
-					l = nvp_grabi(row->data,k);
+					if (k < 0 && r->count) {
+						l = nvp_last(row->data);
+					}else{
+						l = nvp_grabi(row->data,k);
+					}
 					cr = where_compare(r,row,t,l);
 					if (cr)
 						break;

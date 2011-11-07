@@ -573,13 +573,15 @@ void sql_select(result_t *r)
 							}
 							*c = '(';
 						}
-						u = r->cols;
-						while (u) {
-							if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
-								t = nvp_search(r->table->columns,u->value);
-								break;
+						if (!t) {
+							u = r->cols;
+							while (u) {
+								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
+									t = nvp_search(r->table->columns,u->value);
+									break;
+								}
+								u = u->next;
 							}
-							u = u->next;
 						}
 						if (!t) {
 							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
@@ -618,13 +620,15 @@ void sql_select(result_t *r)
 							}
 							*c = '(';
 						}
-						u = r->cols;
-						while (u) {
-							if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
-								t = nvp_search(r->table->columns,u->value);
-								break;
+						if (!t) {
+							u = r->cols;
+							while (u) {
+								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
+									t = nvp_search(r->table->columns,u->value);
+									break;
+								}
+								u = u->next;
 							}
-							u = u->next;
 						}
 						if (!t) {
 							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
@@ -658,6 +662,10 @@ void sql_select(result_t *r)
 				n = q;
 				continue;
 			}else if (!strcasecmp(n->value,"HAVING")) {
+				if (!r->group) {
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'HAVING' \"%s\"\n",r->q);
+					return;
+				}
 				wor = 0;
 				n = n->next;
 				while (n) {
@@ -685,6 +693,31 @@ void sql_select(result_t *r)
 								t = nvp_grabi(r->table->columns,k);
 							}
 							*c = '(';
+						}
+						if (!t) {
+							u = r->cols;
+							while (u) {
+								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
+									t = nvp_search(r->table->columns,u->value);
+									break;
+								}
+								u = u->next;
+							}
+						}
+						if (!t && r->count) {
+							u = r->count;
+							while (u) {
+								if (!strcmp(u->value,n->value)) {
+									t = u;
+									break;
+								}else if (u->child && !strcasecmp(u->child->value,"AS") && u->child->next) {
+									if (!strcmp(u->child->next->value,n->value)) {
+										t = u->child->next;
+										break;
+									}
+								}
+								u = u->next;
+							}
 						}
 						if (!t) {
 							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in HAVING clause for table %s\n",n->value,r->table->name->value);
