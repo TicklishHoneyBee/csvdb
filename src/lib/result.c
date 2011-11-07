@@ -172,7 +172,7 @@ void result_where(result_t *r)
 		}
 		if (!j) {
 			c++;
-			if (hl && c < off) {
+			if (hl && c <= off) {
 				row = row->next;
 				continue;
 			}
@@ -183,6 +183,10 @@ void result_where(result_t *r)
 			break;
 		row = row->next;
 	}
+	if (hl) {
+		nvp_set(r->limit,NULL,"0");
+		nvp_set(r->limit->next,NULL,"-1");
+	}
 }
 
 void result_having(result_t *r)
@@ -191,10 +195,6 @@ void result_having(result_t *r)
 	int k;
 	int c = 0;
 	int cr;
-	int hl = 0;
-	int lim = atoi(r->limit->next->value);
-	int off = atoi(r->limit->value);
-	int tl = off+lim;
 	nvp_t *l;
 	nvp_t *q;
 	nvp_t *t;
@@ -202,27 +202,6 @@ void result_having(result_t *r)
 	row_t *row = r->result;
 	row_t *rw;
 	r->result = NULL;
-	if (lim > -1) {
-		hl = 1;
-		if (r->group) {
-			hl = 0;
-		}else if (r->order) {
-			hl = 0;
-		}else if (strncasecmp(r->q,"SELECT ",7)) {
-			hl = 0;
-		}else if (r->count) {
-			hl = 0;
-		}else{
-			l = r->cols;
-			while (l) {
-				if (nvp_search(l->child,"DISTINCT")) {
-					hl = 0;
-					break;
-				}
-				l = l->next;
-			}
-		}
-	}
 	while (row) {
 		j = 0;
 		q = r->having;
@@ -249,15 +228,9 @@ void result_having(result_t *r)
 		}
 		if (!j) {
 			c++;
-			if (hl && c < off) {
-				row = row->next;
-				continue;
-			}
 			rw = row_add(&r->result,row->key);
 			rw->data = row->data;
 		}
-		if (hl && c == tl)
-			break;
 		row = row->next;
 	}
 	row_free_keys(ors);
@@ -613,6 +586,7 @@ void result_limit(result_t *r)
 	row_t *n = r->result;
 	lim1 = atoi(r->limit->value);
 	lim2 = atoi(r->limit->next->value);
+	printf("%d %d %d\n",lim1,lim2,lim1+lim2);
 	while (n) {
 		if (j && j == lim1) {
 			trs = n;
@@ -624,13 +598,15 @@ void result_limit(result_t *r)
 			r->result = trs;
 		}
 		j++;
-		if (lim2 > -1 && j >= lim1+lim2) {
+		if (lim2 > -1 && j == lim1+lim2) {
 			row_free_keys(n->next);
+			printf("%d\n",j);
 			n->next = NULL;
 			break;
 		}
 		n = n->next;
 	}
+	printf("j %d\n",j);
 }
 
 void result_free(result_t *r)
