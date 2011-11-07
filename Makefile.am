@@ -12,5 +12,6 @@ EXTRA_DIST += doc/queries
 EXTRA_DIST += test-unnamed.csv
 EXTRA_DIST += test.csv
 EXTRA_DIST += LICENSE
+EXTRA_DIST += CHANGES
 
 fresh: clean all

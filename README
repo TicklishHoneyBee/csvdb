@@ -38,28 +38,5 @@ I might do more to it, if so I'll let everyone know through
  sandbox.ltmnet.com/csvdb
 If you make any changes, let me know: lisa@ltmnet.com
 
-CHANGES:
-0.1
-	- initial release
-0.2
-	- bugfix to arrow key handling in shell
-	- added support for loading apache log file with APACHE keyword
-	- added INSERT
-	- added UPDATE
-	- added CREATE TABLE
-	- added OUTFILE support
-	- bugfix in WHERE parsing
-	- added some query optimisation
-0.2.1
-	- bugfix in file loading
-	- added DELETE
-0.3
-	- implemented autotools build chain
-	- increased file loading speed
-	- implemented readline based shell
-	- added table/file/column/keyword autocompletion to shell
-	- changes to table and result datastructures
-	- major query optimisations
-	- added AND/OR support to WHERE
-	- expanded WHERE to support =,LIKE,>,<,NOT,<=,>= comparisons
-	- implemented HAVING
+CHANGELOG:
+see CHANGES

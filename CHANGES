@@ -1,0 +1,31 @@
+0.1
+	- initial release
+0.2
+	- bugfix to arrow key handling in shell
+	- added support for loading apache log file with APACHE keyword
+	- added INSERT
+	- added UPDATE
+	- added CREATE TABLE
+	- added OUTFILE support
+	- bugfix in WHERE parsing
+	- added some query optimisation
+0.2.1
+	- bugfix in file loading
+	- added DELETE
+0.3
+	- implemented autotools build chain
+	- increased file loading speed
+	- implemented readline based shell
+	- added table/file/column/keyword autocompletion to shell
+	- changes to table and result datastructures
+	- major query optimisations
+	- added AND/OR support to WHERE
+	- expanded WHERE to support =,LIKE,>,<,NOT,<=,>= comparisons
+	- implemented HAVING
+0.3.1
+	- bugfix to COUNT(*) to stop table rows going missing
+	- added support for dynamic columns in ORDER
+	- added support for dynamic columns in HAVING
+	- bugfix to LIMIT OFFSET
+	- improved output format of csvdb_print_result
+	- added LICENSE to make dist
