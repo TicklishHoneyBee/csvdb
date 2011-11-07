@@ -349,6 +349,9 @@ void result_order(result_t *r)
 	while (n) {
 		trs = NULL;
 		k = nvp_searchi(r->table->columns,n->value);
+		if (k < 0 && r->count) {
+			k = nvp_count(r->cols)-1;
+		}
 		if (nvp_search(n->child,"INT")) {
 			if (!nvp_search(n->child,"DESC")) {
 				q = r->result;
@@ -594,7 +597,6 @@ void result_limit(result_t *r)
 	row_t *n = r->result;
 	lim1 = atoi(r->limit->value);
 	lim2 = atoi(r->limit->next->value);
-	printf("%d %d %d\n",lim1,lim2,lim1+lim2);
 	while (n) {
 		if (j && j == lim1) {
 			trs = n;
@@ -608,13 +610,11 @@ void result_limit(result_t *r)
 		j++;
 		if (lim2 > -1 && j == lim1+lim2) {
 			row_free_keys(n->next);
-			printf("%d\n",j);
 			n->next = NULL;
 			break;
 		}
 		n = n->next;
 	}
-	printf("j %d\n",j);
 }
 
 void result_free(result_t *r)

@@ -630,8 +630,23 @@ void sql_select(result_t *r)
 								u = u->next;
 							}
 						}
+						if (!t && r->count) {
+							u = r->count;
+							while (u) {
+								if (!strcmp(u->value,q->value)) {
+									t = u;
+									break;
+								}else if (u->child && !strcasecmp(u->child->value,"AS") && u->child->next) {
+									if (!strcmp(u->child->next->value,q->value)) {
+										t = u->child->next;
+										break;
+									}
+								}
+								u = u->next;
+							}
+						}
 						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
+							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",q->value,r->table->name->value);
 							return;
 						}
 					}
@@ -809,10 +824,10 @@ void sql_select(result_t *r)
 	result_distinct(r);
 	if (r->group)
 		result_group(r);
-	if (r->order)
-		result_order(r);
 	if (r->count)
 		result_count(r);
+	if (r->order)
+		result_order(r);
 	if (r->group && r->having)
 		result_having(r);
 	if (atoi(r->limit->value) > 0 || atoi(r->limit->next->value) > -1)
