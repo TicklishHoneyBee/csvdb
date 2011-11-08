@@ -40,7 +40,7 @@ AS_IF([test "x${with_readline}" != "xno"], [dnl
 		AC_DEFINE([USE_READLINE], [1], [Define to use readline])
 	], [
 		## in case something goes wrong
-		:
+		with_readline="no"
 	], [-lncurses])])
 AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
 
