@@ -35,14 +35,21 @@ enable experimental support for readline
 READLINE_LIBS=
 AS_IF([test "x${with_readline}" != "xno"], [dnl
 	AC_CHECK_LIB([readline], [main], [dnl
-		AC_SUBST([READLINE_LIBS], ["-lreadline -lncurses"])
+		AC_SUBST([READLINE_LIBS], ["-lreadline"])
 		AC_DEFINE([HAVE_LIBREADLINE], [1], [Define for libreadline])
 		AC_DEFINE([USE_READLINE], [1], [Define to use readline])
 	], [
 		## in case something goes wrong
-		:
-	], [-lncurses])])
+		with_readline="no"
+	], [])])
 AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
+
+AC_CHECK_FUNC([strcasestr], [:], [dnl
+	AC_MSG_ERROR([dnl
+Your libc isn't blessed with an implementation of the strcasestr() dnl
+function.  Get one and try again.
+])])
+
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([src/Makefile])

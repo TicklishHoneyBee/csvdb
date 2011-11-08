@@ -21,7 +21,7 @@ csvdb_SOURCES += client/rdln.c
 csvdb_CPPFLAGS += -I$(topinc)
 csvdb_LDADD += libcsvdb.a
 if USE_READLINE
-csvdb_LDADD += -lreadline
+csvdb_LDADD += $(READLINE_LIBS)
 endif
 
 libcsvdb_a_SOURCES =

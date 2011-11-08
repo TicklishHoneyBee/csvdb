@@ -4,7 +4,9 @@
 #include "csvdb.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <termios.h>
+#if !defined USE_READLINE
+# include <termios.h>
+#endif	/* !USE_READLINE */
 #include <unistd.h>
 
 #ifndef STDIN_FILENO
