@@ -23,6 +23,7 @@ typedef struct nvp_s {
 typedef struct row_s {
 	int key;
 	nvp_t *data;
+	struct row_s *t_data;
 	struct row_s *prev;
 	struct row_s *next;
 } row_t;
@@ -35,6 +36,20 @@ typedef struct table_s {
 	struct table_s *prev;
 	struct table_s *next;
 } table_t;
+
+typedef struct table_ref_s {
+	char* alias;
+	table_t *t;
+	struct table_ref_s *next;
+} table_ref_t;
+
+typedef struct column_ref_s {
+	char* name;
+	char* alias;
+	int t_index;
+	int r_index;
+	table_t *table;
+} column_ref_t;
 
 typedef struct result_s {
 	int ar;

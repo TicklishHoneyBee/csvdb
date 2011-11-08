@@ -32,12 +32,14 @@ nvp_t *sql_split(char* q, int bs)
 {
 	nvp_t *r = NULL;
 	char c;
+	char* n;
 	char buff[1024];
 	int b;
 	int l;
 	int s;
 	int se;
 	int i;
+	int ws = 0;
 
 	b = 0;
 	l = strlen(q)+1;
@@ -56,6 +58,7 @@ nvp_t *sql_split(char* q, int bs)
 				}else{
 					s = 0;
 					se = 1;
+					ws = 1;
 					goto column_end;
 				}
 			}
@@ -76,7 +79,13 @@ column_end:
 					continue;
 				}
 			}
-			nvp_add(&r,NULL,buff);
+			if (ws) {
+				n = "'";
+				ws = 0;
+			}else{
+				n = NULL;
+			}
+			nvp_add(&r,n,buff);
 			if (b) {
 				if (c == ',' || (bs && (c == '(' || c == ')'))) {
 					sprintf(buff,"%c",c);
@@ -93,12 +102,15 @@ column_end:
 	return r;
 }
 
+/* get the string "SELECT x FROM y ..." from a sub query starting at node start,
+ * and return the next node after the end of the query in end */
 char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
 {
 	char* ret;
 	char* p;
 	nvp_t *n = start;
 	int bc = 1;
+	int is;
 	int len = strlen(or->q);
 	ret = malloc(sizeof(char)*len);
 	if (!ret)
@@ -107,6 +119,11 @@ char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
 	ret[0] = 0;
 
 	while (bc && n) {
+		if (n->name && !strcmp(n->name,"'")) {
+			is = 1;
+		}else{
+			is = 0;
+		}
 		if (n == start) {
 			if (!strcasecmp(start->value,"(SELECT")) {
 				strcpy(ret,"SELECT ");
@@ -127,7 +144,13 @@ char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
 					p = strchr(n->value,')');
 					*p = 0;
 					strcat(ret," ");
-					strcat(ret,n->value);
+					if (is) {
+						strcat(ret,"'");
+						strcat(ret,n->value);
+						strcat(ret,"'");
+					}else{
+						strcat(ret,n->value);
+					}
 					*p = ')';
 				}
 				n = n->next;
@@ -135,7 +158,13 @@ char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
 			}
 		}
 		strcat(ret," ");
-		strcat(ret,n->value);
+		if (is) {
+			strcat(ret,"'");
+			strcat(ret,n->value);
+			strcat(ret,"'");
+		}else{
+			strcat(ret,n->value);
+		}
 		n = n->next;
 	}
 
