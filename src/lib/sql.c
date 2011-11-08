@@ -93,6 +93,63 @@ column_end:
 	return r;
 }
 
+char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
+{
+	char* ret;
+	char* p;
+	nvp_t *n = start;
+	int bc = 1;
+	int len = strlen(or->q);
+	ret = malloc(sizeof(char)*len);
+	if (!ret)
+		return NULL;
+
+	ret[0] = 0;
+
+	while (bc && n) {
+		if (n == start) {
+			if (!strcasecmp(start->value,"(SELECT")) {
+				strcpy(ret,"SELECT ");
+			}else if (strcmp(start->value,"(")) {
+				free(ret);
+				error(or,CSVDB_ERROR_SUBQUERY,"syntax error near '%s' \"%s\"\n",start->value,or->q);
+				return NULL;
+			}
+			n = n->next;
+			continue;
+		}
+		if (strchr(n->value,'('))
+			bc++;
+		if (strchr(n->value,')')) {
+			bc--;
+			if (!bc) {
+				if (n->value[1]) {
+					p = strchr(n->value,')');
+					*p = 0;
+					strcat(ret," ");
+					strcat(ret,n->value);
+					*p = ')';
+				}
+				n = n->next;
+				break;
+			}
+		}
+		strcat(ret," ");
+		strcat(ret,n->value);
+		n = n->next;
+	}
+
+	*end = n;
+
+	if (bc) {
+		free(ret);
+		error(or,CSVDB_ERROR_SUBQUERY,"syntax error near '%s' \"%s\"\n",start->value,or->q);
+		return NULL;
+	}
+
+	return ret;
+}
+
 /* DESCRIBE table */
 void sql_describe(result_t *r)
 {
@@ -252,6 +309,8 @@ void sql_select(result_t *r)
 	char* c;
 	char* c1;
 	char* c2;
+	result_t *sub;
+	result_t *s;
 	nvp_t *l = NULL;
 	nvp_t *t;
 	nvp_t *u;
@@ -509,6 +568,44 @@ void sql_select(result_t *r)
 						k = CMP_LESSOREQ;
 					}else if (!strcasecmp(n->value,"IN")) {
 						k = CMP_IN;
+						if (!strcmp(n->next->value,"(") || !strcasecmp(n->next->value,"(SELECT")) {
+							c = sql_subquery_getstring(r,n->next,&u);
+							if (!c)
+								return;
+							sub = csvdb_query(c);
+							if (!sub) {
+								error(r,CSVDB_ERROR_SUBQUERY,"invalid result set from subquery \"%s\"\n",c);
+								free(c);
+								return;
+							}else if (sub->error) {
+								r->error = sub->error;
+								sub->error = NULL;
+								result_free(sub);
+								free(c);
+								return;
+							}
+							free(c);
+							if (r->sub) {
+								s = r->sub;
+								while (s->next) {
+									s = s->next;
+								}
+								s->next = sub;
+							}else{
+								r->sub = sub;
+							}
+							if (wor) {
+								q = nvp_add(&l->child,t->value,NULL);
+								q->num = CMP_IN;
+								q->value = (char*)sub;
+							}else{
+								l = nvp_add(&r->where,t->value,NULL);
+								l->num = CMP_IN;
+								l->value = (char*)sub;
+							}
+							n = u;
+							continue;
+						}
 					}else if (!strcasecmp(n->value,"NOT")) {
 						if (n->next->next) {
 							if (!strcasecmp(n->next->value,"LIKE")) {
@@ -517,6 +614,45 @@ void sql_select(result_t *r)
 							}else if (!strcasecmp(n->next->value,"IN")) {
 								k = CMP_NOTIN;
 								n = n->next;
+								if (!strcmp(n->next->value,"(") || !strcasecmp(n->next->value,"(SELECT")) {
+									result_t *sub;
+									c = sql_subquery_getstring(r,n->next,&u);
+									if (!c)
+										return;
+									sub = csvdb_query(c);
+									if (!sub) {
+										error(r,CSVDB_ERROR_SUBQUERY,"invalid result set from subquery \"%s\"\n",c);
+										free(c);
+										return;
+									}else if (sub->error) {
+										r->error = sub->error;
+										sub->error = NULL;
+										result_free(sub);
+										free(c);
+										return;
+									}
+									free(c);
+									if (r->sub) {
+										s = r->sub;
+										while (s->next) {
+											s = s->next;
+										}
+										s->next = sub;
+									}else{
+										r->sub = sub;
+									}
+									if (wor) {
+										q = nvp_add(&l->child,t->value,NULL);
+										q->num = CMP_NOTIN;
+										q->value = (char*)sub;
+									}else{
+										l = nvp_add(&r->where,t->value,NULL);
+										l->num = CMP_NOTIN;
+										l->value = (char*)sub;
+									}
+									n = u;
+									continue;
+								}
 							}else{
 								k = CMP_NOTEQUALS;
 							}
@@ -1974,7 +2110,7 @@ void sql_delete(result_t *r)
 		rw = rw->next;
 	}
 end_delete:
-	row_free_all(r->result);
+	row_free_keys(r->result);
 	r->result = NULL;
 }
 
@@ -1999,6 +2135,8 @@ result_t *csvdb_query(char* q)
 	r->count = NULL;
 	r->result = NULL;
 	r->error = NULL;
+	r->next = NULL;
+	r->sub = NULL;
 
 	if (!r->keywords) {
 		error(r,CSVDB_ERROR_SYNTAX,"invalid query: \"%s\"\n",r->q);

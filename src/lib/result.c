@@ -22,6 +22,8 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 {
 	int v;
 	int k;
+	result_t *sub;
+	row_t *rw;
 	switch (q->num) {
 	case CMP_EQUALS:
 		if (l) {
@@ -80,7 +82,18 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 			return 0;
 		break;
 	case CMP_IN:
-		error(r,CSVDB_ERROR_UNSUPPORTED,"'IN' not currently supported, skipping \"%s\"\n",r->q);
+		sub = (result_t*)q->value;
+		if (nvp_count(sub->cols) != 1) {
+			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
+			return 0;
+		}
+		rw = sub->result;
+		while (rw) {
+			if (!strcasecmp(l->value,rw->data->value))
+				return 1;
+			rw = rw->next;
+		}
+		return 0;
 		break;
 	case CMP_NOTEQUALS:
 		if (l) {
@@ -99,8 +112,18 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 		}
 		break;
 	case CMP_NOTIN:
-		error(r,CSVDB_ERROR_UNSUPPORTED,"'IN' not currently supported, skipping \"%s\"\n",r->q);
-		return 0;
+		sub = (result_t*)q->value;
+		if (nvp_count(sub->cols) != 1) {
+			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
+			return 0;
+		}
+		rw = sub->result;
+		while (rw) {
+			if (!strcasecmp(l->value,rw->data->value))
+				return 0;
+			rw = rw->next;
+		}
+		break;
 	default:
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' in WHERE clause \"%s\"\n",q->name,r->q);
 		row_free_keys(r->result);
@@ -153,12 +176,22 @@ void result_where(result_t *r)
 			k = nvp_searchi(r->table->columns,q->name);
 			l = nvp_grabi(row->data,k);
 			cr = where_compare(r,row,q,l);
+			if (r->error) {
+				row_free_keys(r->result);
+				r->result = NULL;
+				return;
+			}
 			if (!cr) {
 				t = q->child;
 				while (t) {
 					k = nvp_searchi(r->table->columns,t->name);
 					l = nvp_grabi(row->data,k);
 					cr = where_compare(r,row,t,l);
+					if (r->error) {
+						row_free_keys(r->result);
+						r->result = NULL;
+						return;
+					}
 					if (cr)
 						break;
 					t = t->next;
@@ -619,6 +652,7 @@ void result_limit(result_t *r)
 
 void result_free(result_t *r)
 {
+	result_t *s;
 	if (!r)
 		return;
 	if (r->q)
@@ -631,6 +665,11 @@ void result_free(result_t *r)
 	nvp_free_all(r->limit);
 	nvp_free_all(r->count);
 	row_free_all(r->result);
+
+	while ((s = r->sub)) {
+		r->sub = s->next;
+		result_free(s);
+	}
 
 	free(r);
 }

@@ -50,6 +50,8 @@ typedef struct result_s {
 	nvp_t *count;
 	row_t *result;
 	nvp_t *error;
+	struct result_s *sub;
+	struct result_s *next;
 	unsigned int time;
 } result_t;
 
