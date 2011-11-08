@@ -2110,6 +2110,7 @@ void sql_delete(result_t *r)
 		rw = rw->next;
 	}
 end_delete:
+	/* keys, so we don't destroy the table! */
 	row_free_keys(r->result);
 	r->result = NULL;
 }
