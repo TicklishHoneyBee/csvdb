@@ -29,3 +29,8 @@
 	- bugfix to LIMIT OFFSET
 	- improved output format of csvdb_print_result
 	- added LICENSE to make dist
+0.3.1
+	- improved compatibility with mingw for windows builds
+	- bugfix in delete to stop table supposedly undeleted table rows going
+		missing
+	- implemented sub squeries

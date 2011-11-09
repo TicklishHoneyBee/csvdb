@@ -3,7 +3,7 @@ dnl Autoconf startup.
 dnl -------------------------------------------------------------------------
 
 AC_PREREQ([2.61])
-AC_INIT([csvdb], [0.3.1], [http://sandbox.ltmnet.com/csvdb])
+AC_INIT([csvdb], [0.3.2], [http://sandbox.ltmnet.com/csvdb])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/])
 
