@@ -653,12 +653,28 @@ void result_limit(result_t *r)
 void result_free(result_t *r)
 {
 	result_t *s;
+	nvp_t *w;
+	nvp_t *wo;
 	if (!r)
 		return;
 	if (r->q)
 		free(r->q);
 	nvp_free_all(r->cols);
 	nvp_free_all(r->keywords);
+	/* IN means the value is a result set, so we need to NULL them out to
+	 * prevent double free's occuring */
+	w = r->where;
+	while (w) {
+		if (w->num == CMP_IN || w->num == CMP_NOTIN)
+			w->value = NULL;
+		wo = w->child;
+		while (wo) {
+			if (wo->num == CMP_IN || wo->num == CMP_NOTIN)
+				wo->value = NULL;
+			wo = wo->next;
+		}
+		w = w->next;
+	}
 	nvp_free_all(r->where);
 	nvp_free_all(r->group);
 	nvp_free_all(r->order);
