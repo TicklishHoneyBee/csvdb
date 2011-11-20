@@ -184,14 +184,12 @@ void sql_describe(result_t *r)
 {
 	nvp_t *n;
 	row_t *row;
-	nvp_add(&r->cols,NULL,"name");
+	column_add(&r->cols,"name",NULL,NULL);
 	if (!r->keywords->next) {
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",r->keywords->value,r->q);
 		return;
-	}else if (!strcasecmp(r->keywords->next->value,"FILE")) {
-		r->table = tables;
 	}else{
-		r->table = table_load_csv(r->keywords->next->value,NULL);
+		r->table = table_resolve(r->keywords->next->value,r);
 	}
 
 	if (!r->table) {
@@ -199,7 +197,7 @@ void sql_describe(result_t *r)
 		return;
 	}
 
-	n = r->table->columns;
+	n = r->table->t->columns;
 	while (n) {
 		row = row_add(&r->result,0);
 		nvp_add(&row->data,NULL,n->value);
@@ -212,7 +210,7 @@ void sql_show_columns(result_t *r)
 {
 	row_t *row;
 	nvp_t *n = r->keywords->next;
-	nvp_add(&r->cols,NULL,"name");
+	column_add(&r->cols,"name",NULL,NULL);
 	if (!n->next || strcasecmp(n->next->value,"FROM")) {
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
@@ -223,18 +221,14 @@ void sql_show_columns(result_t *r)
 		return;
 	}
 	n = n->next;
-	if (!strcasecmp(n->value,"FILE")) {
-		r->table = tables;
-	}else{
-		r->table = table_load_csv(n->value,NULL);
-	}
+	r->table = table_resolve(n->value,r);
 
 	if (!r->table) {
 		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
 	}
 
-	n = r->table->columns;
+	n = r->table->t->columns;
 	while (n) {
 		row = row_add(&r->result,0);
 		nvp_add(&row->data,NULL,n->value);
@@ -259,8 +253,8 @@ void sql_show_tables(result_t *r)
 
 	if (!strcasecmp(l->value,"TABLES")) {
 		table_t *t;
-		r->cols = nvp_create(NULL,"name");
-		nvp_add(&r->cols,NULL,"aliases");
+		column_add(&r->cols,"name",NULL,NULL);
+		column_add(&r->cols,"aliases",NULL,NULL);
 		if (l->next && !strcasecmp(l->next->value,"LIKE")) {
 			l = l->next;
 			if (!l->next) {
@@ -340,6 +334,8 @@ void sql_select(result_t *r)
 	char* c2;
 	result_t *sub;
 	result_t *s;
+	column_ref_t *col = NULL;
+	table_ref_t *tbl;
 	nvp_t *l = NULL;
 	nvp_t *t;
 	nvp_t *u;
@@ -357,15 +353,11 @@ void sql_select(result_t *r)
 
 	q = q->next;
 
-	if (!strcasecmp(q->value,"FILE")) {
-		r->table = tables;
-	}else{
-		r->table = table_load_csv(q->value,NULL);
-	}
-	if (!r->table) {
-		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",q->value);
+	/* TODO: support JOIN */
+	r->table = table_resolve(q->value,r);
+
+	if (!r->table)
 		return;
-	}
 
 	nvp_add(&r->limit,NULL,"0");
 	nvp_add(&r->limit,NULL,"-1");
@@ -386,17 +378,21 @@ void sql_select(result_t *r)
 			continue;
 		}
 		if (!strcasecmp(n->value,"AS")) {
-			l = nvp_last(r->cols);
+			if (!col || !n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'AS' \"%s\"\n",r->q);
+				return;
+			}
 			n = n->next;
-			if (n && !is_keyword(n->value)) {
-				if (!lim1) {
-					nvp_add(&l->child,NULL,"AS");
-					nvp_add(&l->child,NULL,n->value);
-				}else if (r->count) {
-					t = nvp_last(r->count);
-					nvp_add(&t->child,NULL,"AS");
-					nvp_add(&t->child,NULL,n->value);
+			if (lim1) {
+				t = nvp_last(r->count);
+				if (!t) {
+					error(r,CSVDB_ERROR_INTERNAL,"internal error assigning count alias '%s' \"%s\"\n",n->value,r->q);
+					return;
 				}
+				t->child = nvp_create(NULL,"AS");
+				nvp_add(&t->child,NULL,n->value);
+			}else{
+				col->alias = strdup(n->value);
 			}
 			if (n)
 				n = n->next;
@@ -406,8 +402,7 @@ void sql_select(result_t *r)
 			*c = 0;
 			if (!strcasecmp(n->value,"COUNT")) {
 				*c = '(';
-				nvp_add(&r->count,NULL,n->value);
-				t = nvp_last(r->count);
+				t = nvp_add(&r->count,NULL,n->value);
 				if (t) {
 					*c = 0;
 					c1 = c+1;
@@ -420,85 +415,27 @@ void sql_select(result_t *r)
 					if (*(c2+1) == ')')
 						c2++;
 					*c2 = 0;
-					if (is_numeric(c1)) {
-						k = atoi(c1);
-						k--;
-						q = nvp_grabi(r->table->columns,k);
-					}else{
-						q = nvp_search(r->table->columns,c1);
-					}
-					if (!q) {
-						if (!strcmp(c1,"*")) {
-							q = r->table->columns;
-						}else{
-							char* c;
-							if ((c = strchr(c1,'('))) {
-								*c = 0;
-								if (!strcasecmp(c1,"COLUMN")) {
-									*c = '(';
-									if (get_column_id(buff,r,c1))
-										return;
-									k = atoi(buff);
-									k--;
-									q = nvp_grabi(r->table->columns,k);
-								}
-								*c = '(';
-							}
-							u = r->cols;
-							while (u) {
-								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(c1,l->next->value)) {
-									q = nvp_search(r->table->columns,u->value);
-									break;
-								}
-								u = u->next;
-							}
-						}
-						if (!q) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in COUNT for table %s\n",c1,r->table->name->value);
-							return;
-						}
-					}
-					strcpy(buff,t->value);
-					nvp_set(t,q->value,buff);
+					col = column_find(c1,r);
 					*c = '(';
 					*c2 = ')';
+					if (!col)
+						return;
+					col->keywords = q;
+					q = NULL;
 				}
 				lim1 = 1;
-				n = n->next;
-				continue;
-			}else if (!strcasecmp(n->value,"COLUMN")) {
-				*c = '(';
-				if (get_column_id(buff,r,n->value))
-					return;
-				nvp_add(&r->cols,NULL,buff);
-				lim1 = 0;
 				n = n->next;
 				continue;
 			}
 			*c = '(';
 		}
-		if (!strcmp(n->value,"*")) {
-			l = r->table->columns;
-			lim1 = 0;
-			while (l) {
-				nvp_add(&r->cols,NULL,l->value);
-				l = l->next;
-			}
-			n = n->next;
-			continue;
-		}
-		if (!nvp_search(r->table->columns,n->value)) {
-			error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in %s\n",n->value,r->table->name->value);
+		col = column_find(n->value,r);
+		if (!col)
 			return;
-		}
-		nvp_add(&r->cols,NULL,n->value);
+		col->keywords = q;
+		q = NULL;
+		column_push(&r->cols,col);
 		lim1 = 0;
-		if (q) {
-			l = nvp_last(r->cols);
-			if (l)
-				l->child = q;
-			q = NULL;
-		}
 		n = n->next;
 	}
 
@@ -537,39 +474,15 @@ void sql_select(result_t *r)
 						n = n->next;
 						wor = 1;
 						continue;
+					}else if (is_keyword(n->value)) {
+						break;
 					}
-					t = nvp_search(r->table->columns,n->value);
-					if (!t) {
-						if (is_keyword(n->value))
-							break;
-						if ((c = strchr(n->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(n->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,n->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						q = r->cols;
-						while (q) {
-							if (q->child && (l = nvp_search(q->child,"AS")) && l->next && !strcmp(n->value,l->next->value)) {
-								t = nvp_search(r->table->columns,q->value);
-								break;
-							}
-							q = q->next;
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_SYNTAX,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
+					col = column_find(n->value,r);
+					if (!col)
+						return;
 					n = n->next;
 					if (!n) {
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}else if (!n->next) {
 						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -624,11 +537,11 @@ void sql_select(result_t *r)
 								r->sub = sub;
 							}
 							if (wor) {
-								q = nvp_add(&l->child,t->value,NULL);
+								q = nvp_add(&l->child,col->name,NULL);
 								q->num = CMP_IN;
 								q->value = (char*)sub;
 							}else{
-								l = nvp_add(&r->where,t->value,NULL);
+								l = nvp_add(&r->where,col->name,NULL);
 								l->num = CMP_IN;
 								l->value = (char*)sub;
 							}
@@ -671,11 +584,11 @@ void sql_select(result_t *r)
 										r->sub = sub;
 									}
 									if (wor) {
-										q = nvp_add(&l->child,t->value,NULL);
+										q = nvp_add(&l->child,col->name,NULL);
 										q->num = CMP_NOTIN;
 										q->value = (char*)sub;
 									}else{
-										l = nvp_add(&r->where,t->value,NULL);
+										l = nvp_add(&r->where,col->name,NULL);
 										l->num = CMP_NOTIN;
 										l->value = (char*)sub;
 									}
@@ -689,25 +602,30 @@ void sql_select(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}
 					n = n->next;
 					if (wor) {
-						q = nvp_add(&l->child,t->value,n->value);
+						q = nvp_add(&l->child,col->name,n->value);
 						q->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(q,t->value,buff);
+							nvp_set(q,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							q->num |= CMP_STRING;
 					}else{
-						l = nvp_add(&r->where,t->value,n->value);
+						l = nvp_add(&r->where,col->name,n->value);
 						l->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(l,t->value,buff);
+							nvp_set(l,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							l->num |= CMP_STRING;
 					}
+					column_free(col);
 					n = n->next;
 				}
 				continue;
@@ -722,38 +640,13 @@ void sql_select(result_t *r)
 						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,q->value);
-					if (!t) {
-						if (is_keyword(q->value))
-							break;
-						if ((c = strchr(q->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(q->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,q->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							u = r->cols;
-							while (u) {
-								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
-									t = nvp_search(r->table->columns,u->value);
-									break;
-								}
-								u = u->next;
-							}
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
-					nvp_add(&r->group,NULL,t->value);
+					if (is_keyword(q->value))
+						break;
+					col = column_find(q->value,r);
+					if (!col)
+						return;
+					nvp_add(&r->group,NULL,col->name);
+					column_free(col);
 					q = q->next;
 				}
 				n = q;
@@ -769,54 +662,11 @@ void sql_select(result_t *r)
 						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,q->value);
-					if (!t) {
-						if (is_keyword(q->value))
-							break;
-						if ((c = strchr(q->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(q->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,q->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							u = r->cols;
-							while (u) {
-								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
-									t = nvp_search(r->table->columns,u->value);
-									break;
-								}
-								u = u->next;
-							}
-						}
-						if (!t && r->count) {
-							u = r->count;
-							while (u) {
-								if (!strcmp(u->value,q->value)) {
-									t = u;
-									break;
-								}else if (u->child && !strcasecmp(u->child->value,"AS") && u->child->next) {
-									if (!strcmp(u->child->next->value,q->value)) {
-										t = u->child->next;
-										break;
-									}
-								}
-								u = u->next;
-							}
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",q->value,r->table->name->value);
-							return;
-						}
-					}
-					nvp_add(&r->order,NULL,t->value);
-					t = nvp_last(r->order);
+					col = column_find(n->value,r);
+					if (!col)
+						return;
+					t = nvp_add(&r->order,NULL,col->name);
+					column_free(col);
 					q = q->next;
 					while (q) {
 						if (!strcasecmp(q->value,"AS")) {
@@ -858,55 +708,12 @@ void sql_select(result_t *r)
 						wor = 1;
 						continue;
 					}
-					t = nvp_search(r->table->columns,n->value);
-					if (!t) {
-						if (is_keyword(n->value))
-							break;
-						if ((c = strchr(n->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(n->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,n->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							u = r->cols;
-							while (u) {
-								if (u->child && (l = nvp_search(u->child,"AS")) && l->next && !strcmp(q->value,l->next->value)) {
-									t = nvp_search(r->table->columns,u->value);
-									break;
-								}
-								u = u->next;
-							}
-						}
-						if (!t && r->count) {
-							u = r->count;
-							while (u) {
-								if (!strcmp(u->value,n->value)) {
-									t = u;
-									break;
-								}else if (u->child && !strcasecmp(u->child->value,"AS") && u->child->next) {
-									if (!strcmp(u->child->next->value,n->value)) {
-										t = u->child->next;
-										break;
-									}
-								}
-								u = u->next;
-							}
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in HAVING clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
+					col = column_resolve(n->value,r);
+					if (!col)
+						return;
 					n = n->next;
 					if (!n) {
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}else if (!n->next) {
 						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -949,24 +756,28 @@ void sql_select(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}
 					n = n->next;
 					if (wor) {
-						q = nvp_add(&l->child,t->value,n->value);
+						q = nvp_add(&l->child,col->name,n->value);
 						q->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(q,t->value,buff);
+							nvp_set(q,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							q->num |= CMP_STRING;
 					}else{
-						l = nvp_add(&r->having,t->value,n->value);
+						l = nvp_add(&r->having,col->name,n->value);
 						l->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(l,t->value,buff);
+							nvp_set(l,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							l->num |= CMP_STRING;
 					}
 					n = n->next;
 				}
@@ -1378,9 +1189,9 @@ void sql_insert(result_t *r)
 	nvp_t *c;
 	row_t *row;
 	row_t *t;
+	column_ref_t *col;
 	char* b;
 	int ig = 0;
-	int k;
 	char buff[1024];
 	int key;
 	nvp_free_all(r->keywords);
@@ -1403,7 +1214,7 @@ void sql_insert(result_t *r)
 	}
 	l = l->next;
 	n = l;
-	r->table = table_load_csv(n->value,NULL);
+	r->table = table_resolve(n->value,r);
 	if (!r->table) {
 		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
@@ -1412,7 +1223,8 @@ void sql_insert(result_t *r)
 	if (!strcmp(l->value,"(")) {
 		l = l->next;
 		while (l) {
-			nvp_add(&r->cols,NULL,l->value);
+			col = column_find(l->value,r);
+			column_push(&r->cols,col);
 			while (l) {
 				if (!strcmp(l->value,","))
 					break;
@@ -1473,21 +1285,17 @@ end_rows:
 
 	t = r->result;
 	while (t) {
-		key = table_next_key(r->table);
+		key = table_next_key(r->table->t);
 
-		row = row_add(&r->table->rows,key);
-		c = r->table->columns;
+		row = row_add(&r->table->t->rows,key);
+		c = r->table->t->columns;
 		while (c) {
-			k = nvp_searchi(r->cols,c->value);
-			if (k < 0) {
-				buff[0]= 0;
+			col = column_resolve(c->value,r);
+			if (col) {
+				n = column_fetch_data(t,col);
+				strcpy(buff,n->value);
 			}else{
-				l = nvp_grabi(t->data,k);
-				if (!l) {
-					buff[0]= 0;
-				}else{
-					strcpy(buff,l->value);
-				}
+				buff[0]= 0;
 			}
 
 			nvp_add(&row->data,NULL,buff);
@@ -1510,6 +1318,7 @@ void sql_update(result_t *r)
 	nvp_t *q;
 	row_t *row;
 	row_t *rw;
+	column_ref_t *col;
 	char* b;
 	char* c;
 	char* v;
@@ -1517,7 +1326,6 @@ void sql_update(result_t *r)
 	int k;
 	int wor = 0;
 	char buff[1024];
-	char cbuff[1024];
 	int ign = 0;
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
@@ -1534,7 +1342,7 @@ void sql_update(result_t *r)
 		l = l->next;
 	}
 	n = l;
-	r->table = table_load_csv(n->value,NULL);
+	r->table = table_resolve(n->value,r);
 	if (!r->table) {
 		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
@@ -1617,28 +1425,13 @@ void sql_update(result_t *r)
 				}
 			}
 		}
-		t = nvp_search(r->table->columns,c);
-		if (!t) {
-			if (is_keyword(c))
-				break;
-			if ((b = strchr(c,'('))) {
-				*b = 0;
-				if (!strcasecmp(c,"COLUMN")) {
-					*b = '(';
-					if (get_column_id(cbuff,r,c))
-						return;
-					k = atoi(cbuff);
-					k--;
-					t = nvp_grabi(r->table->columns,k);
-				}
-				*b = '(';
-			}
-			if (!t) {
-				error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' for table %s\n",l->value,r->table->name->value);
-				return;
-			}
-		}
-		nvp_add(&r->cols,buff,t->value);
+		if (is_keyword(c))
+			break;
+		col = column_find(c,r);
+		if (!col)
+			return;
+		nvp_add(&col->keywords,NULL,buff);
+		column_push(&r->cols,col);
 		if (l)
 			l = l->next;
 	}
@@ -1680,30 +1473,12 @@ void sql_update(result_t *r)
 						wor = 1;
 						continue;
 					}
-					t = nvp_search(r->table->columns,n->value);
-					if (!t) {
-						if (is_keyword(n->value))
-							break;
-						if ((c = strchr(n->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(n->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,n->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
+					col = column_find(n->value,r);
+					if (!col)
+						return;
 					n = n->next;
 					if (!n) {
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}else if (!n->next) {
 						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -1746,25 +1521,30 @@ void sql_update(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}
 					n = n->next;
 					if (wor) {
-						q = nvp_add(&l->child,t->value,n->value);
+						q = nvp_add(&l->child,col->name,n->value);
 						q->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(q,t->value,buff);
+							nvp_set(q,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							q->num |= CMP_STRING;
 					}else{
-						l = nvp_add(&r->where,t->value,n->value);
+						l = nvp_add(&r->where,col->name,n->value);
 						l->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(l,t->value,buff);
+							nvp_set(l,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							l->num |= CMP_STRING;
 					}
+					column_free(col);
 					n = n->next;
 				}
 				continue;
@@ -1779,29 +1559,11 @@ void sql_update(result_t *r)
 						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,q->value);
-					if (!t) {
-						if (is_keyword(q->value))
-							break;
-						if ((c = strchr(q->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(q->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,q->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
-					nvp_add(&r->order,NULL,t->value);
-					t = nvp_last(r->order);
+					col = column_find(n->value,r);
+					if (!col)
+						return;
+					t = nvp_add(&r->order,NULL,col->name);
+					column_free(col);
 					q = q->next;
 					while (q) {
 						if (!strcasecmp(q->value,"AS")) {
@@ -1848,21 +1610,20 @@ void sql_update(result_t *r)
 	r->ar = 0;
 	while (rw) {
 		r->ar++;
-		t = r->cols;
-		row = row_search(r->table->rows,rw->key);
+		col = r->cols;
+		row = row_search(r->table->t->rows,rw->key);
 		if (!row) {
-			error(r,CSVDB_ERROR_INTERNAL,"internal error in update for table %s\n",r->table->name->value);
+			error(r,CSVDB_ERROR_INTERNAL,"internal error in update for table %s\n",r->table->t->name->value);
 			goto end_update;
 		}
-		while (t) {
-			k = nvp_searchi(r->table->columns,t->value);
-			l = nvp_grabi(row->data,k);
+		while (col) {
+			l = column_fetch_data(row,col);
 			if (!l) {
-				error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' for table %s\n",t->value,r->table->name->value);
+				error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' for table %s\n",col->name,r->table->t->name->value);
 				goto end_update;
 			}
-			nvp_set(l,NULL,t->name);
-			t = t->next;
+			nvp_set(l,NULL,col->keywords->value);
+			col = col->next;
 		}
 		rw = rw->next;
 	}
@@ -1880,8 +1641,8 @@ void sql_delete(result_t *r)
 	nvp_t *q;
 	row_t *row;
 	row_t *rw;
+	column_ref_t *col;
 	int wor = 0;
-	char* c;
 	int k;
 	char buff[1024];
 	int ign = 0;
@@ -1906,7 +1667,7 @@ void sql_delete(result_t *r)
 	}
 	l = l->next;
 	n = l;
-	r->table = table_load_csv(n->value,NULL);
+	r->table = table_resolve(n->value,r);
 	if (!r->table) {
 		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",n->value);
 		return;
@@ -1949,31 +1710,15 @@ void sql_delete(result_t *r)
 						n = n->next;
 						wor = 1;
 						continue;
+					}else if (is_keyword(n->value)) {
+						break;
 					}
-					t = nvp_search(r->table->columns,n->value);
-					if (!t) {
-						if (is_keyword(n->value))
-							break;
-						if ((c = strchr(n->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(n->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,n->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in WHERE clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
+					col = column_find(n->value,r);
+					if (!col)
+						return;
 					n = n->next;
 					if (!n) {
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}else if (!n->next) {
 						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
@@ -2016,25 +1761,30 @@ void sql_delete(result_t *r)
 							k = CMP_NOTEQUALS;
 						}
 					}else{
-						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",t->value,r->q);
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",col->name,r->q);
 						return;
 					}
 					n = n->next;
 					if (wor) {
-						q = nvp_add(&l->child,t->value,n->value);
+						q = nvp_add(&l->child,col->name,n->value);
 						q->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(q,t->value,buff);
+							nvp_set(q,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							q->num |= CMP_STRING;
 					}else{
-						l = nvp_add(&r->where,t->value,n->value);
+						l = nvp_add(&r->where,col->name,n->value);
 						l->num = k;
 						if (strchr(n->value,'%')) {
 							remove_wildcard(buff,n->value);
-							nvp_set(l,t->value,buff);
+							nvp_set(l,col->name,buff);
 						}
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+							l->num |= CMP_STRING;
 					}
+					column_free(col);
 					n = n->next;
 				}
 				continue;
@@ -2049,29 +1799,12 @@ void sql_delete(result_t *r)
 						q = q->next;
 						continue;
 					}
-					t = nvp_search(r->table->columns,q->value);
-					if (!t) {
-						if (is_keyword(q->value))
-							break;
-						if ((c = strchr(q->value,'('))) {
-							*c = 0;
-							if (!strcasecmp(q->value,"COLUMN")) {
-								*c = '(';
-								if (get_column_id(buff,r,q->value))
-									return;
-								k = atoi(buff);
-								k--;
-								t = nvp_grabi(r->table->columns,k);
-							}
-							*c = '(';
-						}
-						if (!t) {
-							error(r,CSVDB_ERROR_COLUMNREF,"unknown column '%s' in ORDER clause for table %s\n",n->value,r->table->name->value);
-							return;
-						}
-					}
-					nvp_add(&r->order,NULL,t->value);
-					t = nvp_last(r->order);
+					col = column_find(n->value,r);
+					if (!col)
+						return;
+
+					t = nvp_add(&r->order,NULL,col->name);
+					column_free(col);
 					q = q->next;
 					while (q) {
 						if (!strcasecmp(q->value,"AS")) {
@@ -2117,20 +1850,20 @@ void sql_delete(result_t *r)
 	rw = r->result;
 	r->ar = 0;
 	while (rw) {
-		row = row_search(r->table->rows,rw->key);
+		row = row_search(r->table->t->rows,rw->key);
 		if (!row) {
 			if (ign) {
 				rw = rw->next;
 				continue;
 			}
-			error(r,CSVDB_ERROR_INTERNAL,"internal error in delete for table %s\n",r->table->name->value);
+			error(r,CSVDB_ERROR_INTERNAL,"internal error in delete for table %s\n",r->table->t->name->value);
 			goto end_delete;
 		}
 		r->ar++;
 		if (row->prev) {
 			row->prev->next = row->next;
 		}else{
-			r->table->rows = row->next;
+			r->table->t->rows = row->next;
 		}
 		if (row->next)
 			row->next->prev = row->prev;
@@ -2167,6 +1900,7 @@ result_t *csvdb_query(char* q)
 	r->error = NULL;
 	r->next = NULL;
 	r->sub = NULL;
+	r->join = NULL;
 
 	if (!r->keywords) {
 		error(r,CSVDB_ERROR_SYNTAX,"invalid query: \"%s\"\n",r->q);

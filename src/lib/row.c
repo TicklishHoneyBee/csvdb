@@ -23,6 +23,7 @@ row_t *row_create(int key)
 	row_t *r = malloc(sizeof(row_t));
 	r->key = key;
 	r->data = NULL;
+	r->t_data = NULL;
 	r->prev = NULL;
 	r->next = NULL;
 
@@ -59,6 +60,8 @@ void row_free_keys(row_t *r)
 	row_t *n = r;
 	while (n) {
 		r = n;
+		if (r->t_data)
+			row_free_keys(r->t_data);
 		n = n->next;
 		free(r);
 	}
@@ -70,6 +73,8 @@ void row_free_all(row_t *r)
 	while (n) {
 		r = n;
 		n = n->next;
+		if (r->t_data)
+			row_free_keys(r->t_data);
 		nvp_free_all(r->data);
 		free(r);
 	}
@@ -151,6 +156,81 @@ row_t *row_search_higher_string(row_t *stack, int i, char* value)
 
 	while (s) {
 		t = nvp_grabi(s->data,i);
+		if (!t)
+			return s;
+		if (strcmp(t->value,value) > 0)
+			return s;
+		s = s->next;
+	}
+
+	return NULL;
+}
+
+row_t *row_search_lower_int_col(row_t *stack, column_ref_t *col, char* value)
+{
+	int v = atoi(value);
+	int cv;
+	nvp_t *t;
+	row_t *s = stack;
+
+	while (s) {
+		t = column_fetch_data(s,col);
+		if (!t)
+			return s;
+		cv = atoi(t->value);
+		if (cv < v)
+			return s;
+		s = s->next;
+	}
+
+	return NULL;
+}
+
+row_t *row_search_higher_int_col(row_t *stack, column_ref_t *col, char* value)
+{
+	int v = atoi(value);
+	int cv;
+	nvp_t *t;
+	row_t *s = stack;
+
+	while (s) {
+		t = column_fetch_data(s,col);
+		if (!t) {
+			return s;
+		}
+		cv = atoi(t->value);
+		if (cv > v)
+			return s;
+		s = s->next;
+	}
+
+	return NULL;
+}
+
+row_t *row_search_lower_string_col(row_t *stack, column_ref_t *col, char* value)
+{
+	nvp_t *t;
+	row_t *s = stack;
+
+	while (s) {
+		t = column_fetch_data(s,col);
+		if (!t)
+			return s;
+		if (strcmp(t->value,value) < 0)
+			return s;
+		s = s->next;
+	}
+
+	return NULL;
+}
+
+row_t *row_search_higher_string_col(row_t *stack, column_ref_t *col, char* value)
+{
+	nvp_t *t;
+	row_t *s = stack;
+
+	while (s) {
+		t = column_fetch_data(s,col);
 		if (!t)
 			return s;
 		if (strcmp(t->value,value) > 0)
