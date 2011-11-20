@@ -455,7 +455,7 @@ table_ref_t *table_resolve(char* str, result_t *r)
 		*tmp = 0;
 	}
 
-	/* this is resolving an table somewhere other than a table selection */
+	/* this is resolving a table somewhere other than a table selection */
 	if (r->table) {
 		t = r->table;
 		if (!strcasecmp(tbl,"FILE")) {
