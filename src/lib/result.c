@@ -18,33 +18,88 @@
 
 #include "csvdb.h"
 
+/* compare q->value using q->num against row value l->value in result r */
 static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 {
 	int v;
 	int k;
+	int s = 0;
+	int c = q->num;
 	result_t *sub;
+	nvp_t *n;
+	column_ref_t *col;
 	row_t *rw;
-	switch (q->num) {
+	if (q->num&CMP_STRING) {
+		c -= CMP_STRING;
+		s = 1;
+	}
+	switch (c) {
 	case CMP_EQUALS:
-		if (l) {
-			if (strcasecmp(l->value,q->value))
+		if (s) {
+			if (l) {
+				if (strcasecmp(l->value,q->value))
 					return 0;
-		}else if (strcmp(q->value,"NULL")) {
-			return 0;
+			}else if (strcmp(q->value,"NULL")) {
+				return 0;
+			}
+		}else{
+			col = column_find(q->value,r);
+			if (!col)
+				return 0;
+			n = column_fetch_data(row,col);
+			column_free(col);
+			if (n) {
+				if (!l)
+					return 0;
+				if (strcasecmp(n->value,l->value))
+					return 0;
+			}else if (l) {
+				return 0;
+			}
 		}
 		break;
 	case CMP_LIKE:
-		if (l) {
-			if (!strcasestr(l->value,q->value))
+		if (s) {
+			if (l) {
+				if (!strcasestr(l->value,q->value))
 					return 0;
-		}else if (strcmp(q->value,"NULL")) {
-			return 0;
+			}else if (strcmp(q->value,"NULL")) {
+				return 0;
+			}
+		}else{
+			col = column_find(q->value,r);
+			if (!col)
+				return 0;
+			n = column_fetch_data(row,col);
+			column_free(col);
+			if (n) {
+				if (!l)
+					return 0;
+				if (!strcasestr(n->value,l->value))
+					return 0;
+			}else if (l) {
+				return 0;
+			}
 		}
 		break;
 	case CMP_LESS:
 		k = atoi(q->value);
 		if (l) {
-			v = atoi(l->value);
+			if (!is_numeric(l->value)) {
+				col = column_find(l->value,r);
+				if (!col)
+					return 0;
+				n = column_fetch_data(row,col);
+				column_free(col);
+				if (n) {
+					v = atoi(n->value);
+				}else{
+					v = 0;
+				}
+			}else{
+				v = atoi(l->value);
+			}
+
 		}else{
 			v = 0;
 		}
@@ -54,7 +109,21 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 	case CMP_LESSOREQ:
 		k = atoi(q->value);
 		if (l) {
-			v = atoi(l->value);
+			if (!is_numeric(l->value)) {
+				col = column_find(l->value,r);
+				if (!col)
+					return 0;
+				n = column_fetch_data(row,col);
+				column_free(col);
+				if (n) {
+					v = atoi(n->value);
+				}else{
+					v = 0;
+				}
+			}else{
+				v = atoi(l->value);
+			}
+
 		}else{
 			v = 0;
 		}
@@ -64,7 +133,20 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 	case CMP_GREATER:
 		k = atoi(q->value);
 		if (l) {
-			v = atoi(l->value);
+			if (!is_numeric(l->value)) {
+				col = column_find(l->value,r);
+				if (!col)
+					return 0;
+				n = column_fetch_data(row,col);
+				column_free(col);
+				if (n) {
+					v = atoi(n->value);
+				}else{
+					v = 0;
+				}
+			}else{
+				v = atoi(l->value);
+			}
 		}else{
 			v = 0;
 		}
@@ -74,7 +156,21 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 	case CMP_GREATEROREQ:
 		k = atoi(q->value);
 		if (l) {
-			v = atoi(l->value);
+			if (!is_numeric(l->value)) {
+				col = column_find(l->value,r);
+				if (!col)
+					return 0;
+				n = column_fetch_data(row,col);
+				column_free(col);
+				if (n) {
+					v = atoi(n->value);
+				}else{
+					v = 0;
+				}
+			}else{
+				v = atoi(l->value);
+			}
+
 		}else{
 			v = 0;
 		}
@@ -83,7 +179,7 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 		break;
 	case CMP_IN:
 		sub = (result_t*)q->value;
-		if (nvp_count(sub->cols) != 1) {
+		if (!sub->cols || sub->cols->next) {
 			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
 			return 0;
 		}
@@ -96,24 +192,56 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 		return 0;
 		break;
 	case CMP_NOTEQUALS:
-		if (l) {
-			if (!strcasecmp(l->value,q->value))
+		if (s) {
+			if (l) {
+				if (!strcasecmp(l->value,q->value))
 					return 0;
-		}else if (!strcmp(q->value,"NULL")) {
-			return 0;
+			}else if (!strcmp(q->value,"NULL")) {
+				return 0;
+			}
+		}else{
+			col = column_find(q->value,r);
+			if (!col)
+				return 0;
+			n = column_fetch_data(row,col);
+			column_free(col);
+			if (n) {
+				if (!l)
+					return 1;
+				if (strcasecmp(n->value,l->value))
+					return 0;
+			}else if (!l) {
+				return 0;
+			}
 		}
 		break;
 	case CMP_NOTLIKE:
-		if (l) {
-			if (strcasestr(l->value,q->value))
+		if (s) {
+			if (l) {
+				if (strcasestr(l->value,q->value))
 					return 0;
-		}else if (!strcmp(q->value,"NULL")) {
-			return 0;
+			}else if (!strcmp(q->value,"NULL")) {
+				return 0;
+			}
+		}else{
+			col = column_find(q->value,r);
+			if (!col)
+				return 0;
+			n = column_fetch_data(row,col);
+			column_free(col);
+			if (n) {
+				if (!l)
+					return 1;
+				if (strcasestr(n->value,l->value))
+					return 0;
+			}else if (l) {
+				return 0;
+			}
 		}
 		break;
 	case CMP_NOTIN:
 		sub = (result_t*)q->value;
-		if (nvp_count(sub->cols) != 1) {
+		if (!sub->cols || sub->cols->next) {
 			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
 			return 0;
 		}
@@ -136,7 +264,6 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 void result_where(result_t *r)
 {
 	int j;
-	int k;
 	int c = 0;
 	int cr;
 	int hl = 0;
@@ -146,8 +273,9 @@ void result_where(result_t *r)
 	nvp_t *l;
 	nvp_t *q;
 	nvp_t *t;
-	row_t *row = r->table->rows;
+	row_t *row;
 	row_t *rw;
+	column_ref_t *cl;
 	if (lim > -1) {
 		hl = 1;
 		if (r->group) {
@@ -159,9 +287,9 @@ void result_where(result_t *r)
 		}else if (r->count) {
 			hl = 0;
 		}else{
-			l = r->cols;
-			while (l) {
-				if (nvp_search(l->child,"DISTINCT")) {
+			cl = r->cols;
+			while (cl) {
+				if (nvp_search(cl->keywords,"DISTINCT")) {
 					hl = 0;
 					break;
 				}
@@ -169,12 +297,18 @@ void result_where(result_t *r)
 			}
 		}
 	}
+	if (r->join) {
+		row = r->join;
+	}else{
+		row = r->table->t->rows;
+	}
+
 	while (row) {
 		j = 0;
 		q = r->where;
 		while (q) {
-			k = nvp_searchi(r->table->columns,q->name);
-			l = nvp_grabi(row->data,k);
+			cl = column_resolve(q->name,r);
+			l = column_fetch_data(row,cl);
 			cr = where_compare(r,row,q,l);
 			if (r->error) {
 				row_free_keys(r->result);
@@ -184,8 +318,8 @@ void result_where(result_t *r)
 			if (!cr) {
 				t = q->child;
 				while (t) {
-					k = nvp_searchi(r->table->columns,t->name);
-					l = nvp_grabi(row->data,k);
+					cl = column_resolve(t->name,r);
+					l = column_fetch_data(row,cl);
 					cr = where_compare(r,row,t,l);
 					if (r->error) {
 						row_free_keys(r->result);
@@ -210,7 +344,8 @@ void result_where(result_t *r)
 				continue;
 			}
 			rw = row_add(&r->result,row->key);
-			rw->data = row->data;
+			rw->t_data = row_create(row->key);
+			rw->t_data->data = row->data;
 		}
 		if (hl && c == tl)
 			break;
@@ -225,7 +360,6 @@ void result_where(result_t *r)
 void result_having(result_t *r)
 {
 	int j;
-	int k;
 	int c = 0;
 	int cr;
 	nvp_t *l;
@@ -234,27 +368,20 @@ void result_having(result_t *r)
 	row_t *ors = r->result;
 	row_t *row = r->result;
 	row_t *rw;
+	column_ref_t *cl;
 	r->result = NULL;
 	while (row) {
 		j = 0;
 		q = r->having;
 		while (q) {
-			k = nvp_searchi(r->table->columns,q->name);
-			if (k < 0 && r->count) {
-				l = nvp_last(row->data);
-			}else{
-				l = nvp_grabi(row->data,k);
-			}
+			cl = column_resolve(q->name,r);
+			l = column_fetch_data(row,cl);
 			cr = where_compare(r,row,q,l);
 			if (!cr) {
 				t = q->child;
 				while (t) {
-					k = nvp_searchi(r->table->columns,t->name);
-					if (k < 0 && r->count) {
-						l = nvp_last(row->data);
-					}else{
-						l = nvp_grabi(row->data,k);
-					}
+					cl = column_resolve(t->name,r);
+					l = column_fetch_data(row,cl);
 					cr = where_compare(r,row,t,l);
 					if (cr)
 						break;
@@ -270,7 +397,9 @@ void result_having(result_t *r)
 		if (!j) {
 			c++;
 			rw = row_add(&r->result,row->key);
+			rw->t_data = row->t_data;
 			rw->data = row->data;
+			row->t_data = NULL;
 		}
 		row = row->next;
 	}
@@ -279,30 +408,25 @@ void result_having(result_t *r)
 
 void result_distinct(result_t *r)
 {
-	int j;
 	nvp_t *l;
 	nvp_t *u;
 	row_t *q;
 	row_t *tr;
 	row_t *trs;
-	nvp_t *n = r->cols;
+	column_ref_t *n = r->cols;
 	while (n) {
-		if (nvp_search(n->child,"DISTINCT")) {
+		if (nvp_search(n->keywords,"DISTINCT")) {
 			u = NULL;
 			trs = NULL;
-			if (is_numeric(n->value)) {
-				j = atoi(n->value);
-				j--;
-			}else{
-				j = nvp_searchi(r->table->columns,n->value);
-			}
 			q = r->result;
 			while (q) {
-				l = nvp_grabi(q->data,j);
+				l = column_fetch_data(q,n);
 				if (l && !nvp_search(u,l->value)) {
 					nvp_add(&u,NULL,l->value);
 					tr = row_add(&trs,q->key);
 					tr->data = q->data;
+					tr->t_data = q->t_data;
+					q->t_data = NULL;
 				}
 				q = q->next;
 			}
@@ -316,7 +440,6 @@ void result_distinct(result_t *r)
 void result_group(result_t *r)
 {
 	int j;
-	int k;
 	char buff[1024];
 	char sbuff[64];
 	nvp_t *l;
@@ -327,13 +450,16 @@ void result_group(result_t *r)
 	nvp_t **b;
 	row_t *trs;
 	nvp_t *n = r->group;
+	column_ref_t *col;
 	while (n) {
 		trs = NULL;
-		k = nvp_searchi(r->table->columns,n->value);
+		col = column_resolve(n->value,r);
+		if (!col)
+			break;
 		u = NULL;
 		q = r->result;
 		while (q) {
-			t = nvp_grabi(q->data,k);
+			t = column_fetch_data(q,col);
 			if (t) {
 				sprintf(buff,"%s",t->value);
 			}else{
@@ -344,14 +470,14 @@ void result_group(result_t *r)
 				b = &l->child;
 				if (l->child && !strcasecmp(l->child->value,"AS"))
 					b = &l->child->next->next;
-				t = nvp_search_name(*b,n->value);
+				t = nvp_search_name(*b,buff);
 				if (t) {
 					j = atoi(t->value);
 					j++;
 					sprintf(sbuff,"%d",j);
-					nvp_set(t,n->value,sbuff);
+					nvp_set(t,buff,sbuff);
 				}else{
-					t = nvp_add(b,n->value,"1");
+					t = nvp_add(b,buff,"1");
 					t->num = q->key;
 				}
 				l = l->next;
@@ -359,6 +485,8 @@ void result_group(result_t *r)
 			if (!nvp_search(u,buff)) {
 				tr = row_add(&trs,q->key);
 				tr->data = q->data;
+				tr->t_data = q->t_data;
+				q->t_data = NULL;
 				nvp_add(&u,NULL,buff);
 			}
 			q = q->next;
@@ -371,7 +499,6 @@ void result_group(result_t *r)
 
 void result_order(result_t *r)
 {
-	int k;
 	char buff[1024];
 	row_t *l;
 	row_t *q;
@@ -379,25 +506,25 @@ void result_order(result_t *r)
 	row_t *tr;
 	row_t *trs;
 	nvp_t *n = r->order;
+	column_ref_t *col;
 	while (n) {
 		trs = NULL;
-		k = nvp_searchi(r->table->columns,n->value);
-		if (k < 0 && r->count) {
-			k = nvp_count(r->cols)-1;
-		}
+		col = column_resolve(n->value,r);
 		if (nvp_search(n->child,"INT")) {
 			if (!nvp_search(n->child,"DESC")) {
 				q = r->result;
 				while (q) {
-					t = nvp_grabi(q->data,k);
+					t = column_fetch_data(q,col);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						strcpy(buff,"0");
 					}
-					if ((l = row_search_higher_int(trs,k,buff))) {
+					if ((l = row_search_higher_int_col(trs,col,buff))) {
 						tr = row_create(q->key);
 						tr->data = q->data;
+						tr->t_data = q->t_data;
+						q->t_data = NULL;
 						if (l->prev) {
 							tr->prev = l->prev;
 							tr->next = l;
@@ -418,15 +545,17 @@ void result_order(result_t *r)
 			}else{
 				q = r->result;
 				while (q) {
-					t = nvp_grabi(q->data,k);
+					t = column_fetch_data(q,col);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						strcpy(buff,"0");
 					}
-					if ((l = row_search_lower_int(trs,k,buff))) {
+					if ((l = row_search_lower_int_col(trs,col,buff))) {
 						tr = row_create(q->key);
 						tr->data = q->data;
+						tr->t_data = q->t_data;
+						q->t_data = NULL;
 						if (l->prev) {
 							tr->prev = l->prev;
 							tr->next = l;
@@ -449,15 +578,17 @@ void result_order(result_t *r)
 			if (!nvp_search(n->child,"DESC")) {
 				q = r->result;
 				while (q) {
-					t = nvp_grabi(q->data,k);
+					t = column_fetch_data(q,col);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						buff[0] = 0;
 					}
-					if ((l = row_search_higher_string(trs,k,buff))) {
+					if ((l = row_search_higher_string_col(trs,col,buff))) {
 						tr = row_create(q->key);
 						tr->data = q->data;
+						tr->t_data = q->t_data;
+						q->t_data = NULL;
 						if (l->prev) {
 							tr->prev = l->prev;
 							tr->next = l;
@@ -478,15 +609,17 @@ void result_order(result_t *r)
 			}else{
 				q = r->result;
 				while (q) {
-					t = nvp_grabi(q->data,k);
+					t = column_fetch_data(q,col);
 					if (t) {
 						sprintf(buff,"%s",t->value);
 					}else{
 						buff[0] = 0;
 					}
-					if ((l = row_search_lower_string(trs,k,buff))) {
+					if ((l = row_search_lower_string_col(trs,col,buff))) {
 						tr = row_create(q->key);
 						tr->data = q->data;
+						tr->t_data = q->t_data;
+						q->t_data = NULL;
 						if (l->prev) {
 							tr->prev = l->prev;
 							tr->next = l;
@@ -514,64 +647,72 @@ void result_order(result_t *r)
 
 void result_cols(result_t *r)
 {
-	int k;
-	nvp_t *q;
+	column_ref_t *q;
 	nvp_t *u;
 	nvp_t *t;
 	row_t *n = r->result;
+	int i;
 	if (!r->cols && r->count)
 		return;
 	while (n) {
 		u = NULL;
 		q = r->cols;
 		while (q) {
-			if (is_numeric(q->value)) {
-				k = atoi(q->value);
-				k--;
-			}else{
-				k = nvp_searchi(r->table->columns,q->value);
-			}
-			t = nvp_grabi(n->data,k);
+			t = column_fetch_data(n,q);
 			if (t) {
-				nvp_add(&u,NULL,t->value);
-			}else if (k < 0 && r->count && (t = nvp_last(n->data))) {
 				nvp_add(&u,NULL,t->value);
 			}else{
 				nvp_add(&u,NULL,"NULL");
 			}
 			q = q->next;
 		}
+		nvp_push(&u,n->data);
 		n->data = u;
+		row_free_keys(n->t_data);
+		n->t_data = NULL;
 		n = n->next;
+	}
+	q = r->cols;
+	i = 0;
+	while (q) {
+		q->r_index = i++;
+		q = q->next;
 	}
 }
 
 void result_count(result_t *r)
 {
 	int j;
-	int k;
 	char buff[1024];
-	nvp_t *l;
 	nvp_t *q;
 	row_t *t;
 	nvp_t *u;
 	nvp_t *b;
+	int i = 0;
+	column_ref_t *c;
 	if (r->count && strlen(r->count->value)) {
 		j = row_count(r->result);
 		if (!r->group) {
 			sprintf(buff,"%d",j);
+			column_free_all(r->cols);
 			if (r->count->child && !strcasecmp(r->count->child->value,"AS")) {
-				r->cols = nvp_create(NULL,r->count->child->next->value);
+				r->cols = column_create(r->count->value,r->count->child->next->value,NULL);
 			}else{
-				r->cols = nvp_create(NULL,r->count->value);
+				r->cols = column_create(r->count->value,NULL,NULL);
 			}
+
+			r->cols->t_index = -1;
+			r->cols->r_index = i++;
+
 			q = r->count->next;
 			while (q) {
 				if (q->child && !strcasecmp(q->child->value,"AS")) {
-					nvp_add(&r->cols->child,NULL,q->child->next->value);
+					c = column_add(&r->cols,q->value,q->child->next->value,NULL);
 				}else{
-					nvp_add(&r->cols->child,NULL,q->value);
+					c = column_add(&r->cols,q->value,NULL,NULL);
 				}
+				r->cols->t_index = -1;
+				r->cols->r_index = i++;
 				q = q->next;
 			}
 			row_free_keys(r->result);
@@ -592,29 +733,20 @@ void result_count(result_t *r)
 					u = b;
 					while (u) {
 						if (t->key == u->num) {
-							if (is_numeric(u->name)) {
-								k = atoi(u->name);
-							}else{
-								k = nvp_searchi(r->table->columns,u->name);
-							}
-							l = nvp_grabi(t->data,k);
-							if (!l) {
-								nvp_add(&t->data,NULL,u->value);
-								break;
-							}else{
-								nvp_add(&t->data,NULL,u->value);
-								break;
-							}
+							nvp_add(&t->data,NULL,u->value);
+							break;
 						}
 						u = u->next;
 					}
 					t = t->next;
 				}
 				if (q->child && !strcasecmp(q->child->value,"AS")) {
-					nvp_add(&r->cols,NULL,q->child->next->value);
+					c = column_add(&r->cols,q->value,q->child->next->value,NULL);
 				}else{
-					nvp_add(&r->cols,NULL,q->value);
+					c = column_add(&r->cols,q->value,NULL,NULL);
 				}
+				c->t_index = -1;
+				c->r_index = i++;
 				q = q->next;
 			}
 		}
@@ -659,10 +791,15 @@ void result_free(result_t *r)
 		return;
 	if (r->q)
 		free(r->q);
-	nvp_free_all(r->cols);
+
+	column_free_all(r->cols);
 	nvp_free_all(r->keywords);
 	/* IN means the value is a result set, so we need to NULL them out to
+<<<<<<< HEAD
 	 * prevent double free's occuring */
+=======
+	* prevent double free's occuring */
+>>>>>>> join
 	w = r->where;
 	while (w) {
 		if (w->num == CMP_IN || w->num == CMP_NOTIN)
@@ -695,6 +832,7 @@ table_t *result_to_table(result_t *r, char* name)
 	table_t *t;
 	row_t *n;
 	nvp_t *c;
+	column_ref_t *col;
 	row_t *cr;
 	int key;
 
@@ -705,10 +843,14 @@ table_t *result_to_table(result_t *r, char* name)
 
 	nvp_add(&t->name,NULL,name);
 
-	c = r->cols;
-	while (c) {
-		nvp_add(&t->columns,NULL,c->value);
-		c = c->next;
+	col = r->cols;
+	while (col) {
+		if (col->alias[0]) {
+			nvp_add(&t->columns,NULL,col->alias);
+		}else{
+			nvp_add(&t->columns,NULL,col->name);
+		}
+		col = col->next;
 	}
 
 	n = r->result;

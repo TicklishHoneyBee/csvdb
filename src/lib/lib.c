@@ -77,34 +77,12 @@ int remove_wildcard(char* buff, char* str)
 	return o;
 }
 
-int get_column_id(char* buff, result_t *r, char* str)
-{
-	char *c;
-	char* nve;
-	char* nv;
-	int k;
-	c = strchr(str,'(');
-
-	nv = c+1;
-	nve = strchr(nv,')');
-	if (nve)
-		*nve = 0;
-	k = atoi(nv);
-	if (k < 0 || !nvp_grabi(r->table->columns,k-1)) {
-		error(r,CSVDB_ERROR_OUTOFRANGE,"'COLUMN(%d)' is out of range in %s\r\n",k,r->table->name->value);
-		return 1;
-	}
-	sprintf(buff,"%d",k);
-	if (nve)
-		*nve = ')';
-	return 0;
-}
-
 int csvdb_print_result(result_t *res)
 {
 	row_t *row;
-	nvp_t *col;
-	nvp_t *c;
+	column_ref_t *col;
+	column_ref_t *c;
+	nvp_t *cd;
 	nvp_t *t;
 	row_t *r;
 	int l;
@@ -146,18 +124,22 @@ int csvdb_print_result(result_t *res)
 		printf("formatting results...\n");
 		col = res->cols;
 		while (col) {
-			col->num = strlen(col->value);
+			if (col->alias[0]) {
+				col->num = strlen(col->alias);
+			}else{
+				col->num = strlen(col->name);
+			}
 			col = col->next;
 		}
 		row = r;
 		while (row) {
-			col = row->data;
+			cd = row->data;
 			c = res->cols;
-			while (col && c) {
-				l = strlen(col->value);
+			while (cd && c) {
+				l = strlen(cd->value);
 				if (l > c->num)
 					c->num = l;
-				col = col->next;
+				cd = cd->next;
 				c = c->next;
 			}
 			row = row->next;
@@ -176,11 +158,10 @@ int csvdb_print_result(result_t *res)
 		puts(v);
 		col = res->cols;
 		while (col) {
-			t = nvp_search(col->child,"AS");
-			if (!t || !t->next) {
-				printf("| %*s ",col->num,col->value);
+			if (col->alias[0]) {
+				printf("| %*s ",col->num,col->alias);
 			}else{
-				printf("| %*s ",col->num,t->next->value);
+				printf("| %*s ",col->num,col->name);
 			}
 			col = col->next;
 		}
@@ -189,11 +170,11 @@ int csvdb_print_result(result_t *res)
 
 		row = r;
 		while (row) {
-			col = row->data;
+			cd = row->data;
 			c = res->cols;
-			while (col && c) {
-				printf("| %*s ",c->num,col->value);
-				col = col->next;
+			while (cd && c) {
+				printf("| %*s ",c->num,cd->value);
+				cd = cd->next;
 				c = c->next;
 			}
 			printf("|\n");

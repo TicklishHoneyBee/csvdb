@@ -84,6 +84,24 @@ nvp_t *nvp_add(nvp_t **stack, char* name, char* value)
 	return n;
 }
 
+nvp_t *nvp_push(nvp_t **stack, nvp_t *n)
+{
+	if (!n)
+		return NULL;
+	if (*stack) {
+		nvp_t *s = *stack;
+		while (s->next) {
+			s = s->next;
+		}
+		s->next = n;
+		n->prev = s;
+	}else{
+		*stack = n;
+	}
+
+	return n;
+}
+
 int nvp_count(nvp_t *stack)
 {
 	int r = 0;

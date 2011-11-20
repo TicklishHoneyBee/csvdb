@@ -157,6 +157,8 @@ column_end:
 			buff[b++] = c;
 	}
 
+	t->rc = l;
+
 	if (!t->columns) {
 		table_free(file);
 		t = NULL;
@@ -316,6 +318,8 @@ column_end:
 			buff[b++] = c;
 	}
 
+	t->rc = l;
+
 	fclose(f);
 
 	return t;
@@ -420,4 +424,70 @@ int table_write(table_t *t, char* of)
 	fclose(f);
 
 	return 0;
+}
+
+/* resolve a string to a table in a query */
+table_ref_t *table_resolve(char* str, result_t *r)
+{
+	char* tbl;
+	char* rdup;
+	char* tmp;
+	table_ref_t *t = NULL;
+	int l;
+	if (!str || !r) {
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+		return NULL;
+	}
+
+	l = strlen(str);
+	rdup = alloca(l+1);
+	strcpy(rdup,str);
+
+	tbl = rdup;
+
+	if (!tbl || !tbl[0]) {
+		error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+		return NULL;
+	}
+
+	if (tbl[0] == '`' && (tmp = strchr(tbl+1,'`')) && !tmp[1]) {
+		tbl++;
+		*tmp = 0;
+	}
+
+	/* this is resolving an table somewhere other than a table selection */
+	if (r->table) {
+		t = r->table;
+		if (!strcasecmp(tbl,"FILE")) {
+			return t;
+		}else{
+			while (t) {
+				if (!strcmp(tbl,t->alias) || nvp_search(t->t->name,tbl))
+					return t;
+				t = t->next;
+			}
+		}
+	/* this is resolving a table in a table selection clause */
+	}else{
+		table_t *tab = table_find(tbl);
+		if (!tab) {
+			if (!strcasecmp(tbl,"FILE")) {
+				tab = tables;
+			}else{
+				tab = table_load_csv(tbl,NULL);
+			}
+		}
+
+		if (tab) {
+			t = malloc(sizeof(table_ref_t));
+			t->t = tab;
+			t->next = NULL;
+			t->alias = "";
+			return t;
+		}
+	}
+
+	error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);;
+
+	return NULL;
 }

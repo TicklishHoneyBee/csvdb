@@ -23,12 +23,14 @@ typedef struct nvp_s {
 typedef struct row_s {
 	int key;
 	nvp_t *data;
+	struct row_s *t_data;
 	struct row_s *prev;
 	struct row_s *next;
 } row_t;
 
 typedef struct table_s {
 	int key;
+	int rc;
 	nvp_t *name;
 	nvp_t *columns;
 	row_t *rows;
@@ -36,11 +38,30 @@ typedef struct table_s {
 	struct table_s *next;
 } table_t;
 
+typedef struct table_ref_s {
+	char* alias;
+	table_t *t;
+	struct table_ref_s *next;
+} table_ref_t;
+
+typedef struct column_ref_s {
+	char* name;
+	char* alias;
+	nvp_t *keywords;
+	int num;
+	/* index of the table in the results table references */
+	int t_index;
+	/* index of the column in a table row */
+	int r_index;
+	table_t *table;
+	struct column_ref_s *next;
+} column_ref_t;
+
 typedef struct result_s {
 	int ar;
 	char* q;
-	table_t *table;
-	nvp_t *cols;
+	table_ref_t *table;
+	column_ref_t *cols;
 	nvp_t *keywords;
 	nvp_t *where;
 	nvp_t *group;
@@ -50,6 +71,7 @@ typedef struct result_s {
 	nvp_t *count;
 	row_t *result;
 	nvp_t *error;
+	row_t *join;
 	struct result_s *sub;
 	struct result_s *next;
 	unsigned int time;
@@ -66,6 +88,8 @@ typedef struct result_s {
 #define CMP_NOTEQUALS	7
 #define CMP_NOTLIKE	8
 #define CMP_NOTIN	9
+
+#define CMP_STRING	256
 
 #define CSVDB_ERROR_NONE	0
 #define CSVDB_ERROR_INTERNAL	1
@@ -88,12 +112,14 @@ int table_next_key(table_t *t);
 table_t *table_find(char* name);
 void table_free(char* name);
 int table_write(table_t *t, char* of);
+table_ref_t *table_resolve(char* str, result_t *r);
 
 /* defined in nvp.c */
 nvp_t *nvp_create(char* name, char* value);
 void nvp_free(nvp_t *n);
 void nvp_free_all(nvp_t *n);
 nvp_t *nvp_add(nvp_t **stack, char* name, char* value);
+nvp_t *nvp_push(nvp_t **stack, nvp_t *n);
 int nvp_count(nvp_t *stack);
 nvp_t *nvp_search(nvp_t *stack, char* value);
 nvp_t *nvp_search_name(nvp_t *stack, char* value);
@@ -114,7 +140,6 @@ result_t *csvdb_query(char* q);
 int is_keyword(char* w);
 int is_numeric(char* w);
 int remove_wildcard(char* buff, char* str);
-int get_column_id(char* buff, result_t *r, char* str);
 int csvdb_print_result(result_t *res);
 void error(result_t *r, int err, char* str, ...);
 
@@ -141,6 +166,20 @@ row_t *row_search_lower_int(row_t *stack, int i, char* value);
 row_t *row_search_higher_int(row_t *stack, int i, char* value);
 row_t *row_search_lower_string(row_t *stack, int i, char* value);
 row_t *row_search_higher_string(row_t *stack, int i, char* value);
+row_t *row_search_lower_int_col(row_t *stack, column_ref_t *col, char* value);
+row_t *row_search_higher_int_col(row_t *stack, column_ref_t *col, char* value);
+row_t *row_search_lower_string_col(row_t *stack, column_ref_t *col, char* value);
+row_t *row_search_higher_string_col(row_t *stack, column_ref_t *col, char* value);
 int row_count(row_t *stack);
+
+/* defined in column.c */
+column_ref_t *column_create(char* name, char* alias, table_t *table);
+column_ref_t *column_add(column_ref_t **stack, char* name, char* alias, table_t *table);
+column_ref_t *column_push(column_ref_t **stack, column_ref_t *col);
+void column_free(column_ref_t *c);
+void column_free_all(column_ref_t *c);
+column_ref_t *column_resolve(char* str, result_t *r);
+column_ref_t *column_find(char* str, result_t *r);
+nvp_t *column_fetch_data(row_t *row, column_ref_t *col);
 
 #endif
