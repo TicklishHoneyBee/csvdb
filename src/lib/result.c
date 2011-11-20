@@ -795,11 +795,7 @@ void result_free(result_t *r)
 	column_free_all(r->cols);
 	nvp_free_all(r->keywords);
 	/* IN means the value is a result set, so we need to NULL them out to
-<<<<<<< HEAD
 	 * prevent double free's occuring */
-=======
-	* prevent double free's occuring */
->>>>>>> join
 	w = r->where;
 	while (w) {
 		if (w->num == CMP_IN || w->num == CMP_NOTIN)
