@@ -82,10 +82,12 @@ int csvdb_print_result(result_t *res)
 	row_t *row;
 	column_ref_t *col;
 	column_ref_t *c;
+	table_ref_t *tbl;
 	nvp_t *cd;
 	nvp_t *t;
 	row_t *r;
 	int l;
+	char buff[1024];
 	float tm;
 	char* v;
 	char* s = "";
@@ -128,6 +130,16 @@ int csvdb_print_result(result_t *res)
 				col->num = strlen(col->alias);
 			}else{
 				col->num = strlen(col->name);
+				if (res->table->next) {
+					tbl = table_resolve(col->table->name->value,res);
+					if (tbl->alias && tbl->alias[0]) {
+						col->num += strlen(tbl->alias)+1;
+					}else if (tbl->t->name->next) {
+						col->num += strlen(tbl->t->name->next->value)+1;
+					}else{
+						col->num += strlen(tbl->t->name->value)+1;
+					}
+				}
 			}
 			col = col->next;
 		}
@@ -150,9 +162,18 @@ int csvdb_print_result(result_t *res)
 			l += col->num+3;
 			col = col->next;
 		}
-		l++;
-		v = alloca(sizeof(char)*(l+1));
-		memset(v,'-',l);
+		l += 2;
+		v = alloca(sizeof(char)*(l));
+		v[0] = '+';
+		l = 1;
+		col = res->cols;
+		while (col) {
+			memset(v+l,'-',col->num+2);
+			l += col->num+2;
+			v[l] = '+';
+			l++;
+			col = col->next;
+		}
 		v[l] = '\0';
 
 		puts(v);
@@ -161,7 +182,21 @@ int csvdb_print_result(result_t *res)
 			if (col->alias[0]) {
 				printf("| %*s ",col->num,col->alias);
 			}else{
-				printf("| %*s ",col->num,col->name);
+				if (res->table->next) {
+					tbl = table_resolve(col->table->name->value,res);
+					if (tbl->alias && tbl->alias[0]) {
+						sprintf(buff,"%s.%s",tbl->alias,col->name);
+						printf("| %*s ",col->num,buff);
+					}else if (tbl->t->name->next) {
+						sprintf(buff,"%s.%s",tbl->t->name->next->value,col->name);
+						printf("| %*s ",col->num,buff);
+					}else{
+						sprintf(buff,"%s.%s",tbl->t->name->value,col->name);
+						printf("| %*s ",col->num,buff);
+					}
+				}else{
+						printf("| %*s ",col->num,col->name);
+				}
 			}
 			col = col->next;
 		}
