@@ -214,7 +214,7 @@ column_ref_t *column_find(char* str, result_t *r)
 	int t_i = 0;
 	int r_i = 0;
 	table_ref_t *t = NULL;
-	table_t *tab;
+	table_t *tab = NULL;
 	int l;
 	column_ref_t *ret = NULL;
 	column_ref_t *cl;
@@ -276,31 +276,34 @@ column_ref_t *column_find(char* str, result_t *r)
 				n = n->next;
 			}
 		}else{
-			tab = tables;
+			t = r->table;
 			t_i = 0;
-			while (tab) {
-				n = tab->columns;
+			while (t) {
+				n = t->t->columns;
+				r_i = 0;
 				while (n) {
-					cl = column_add(&ret,n->value,NULL,tab);
+					cl = column_add(&ret,n->value,NULL,t->t);
 					cl->r_index = r_i++;
 					cl->t_index = t_i;
 					n = n->next;
 				}
 				t_i++;
-				tab = tab->next;
+				t = t->next;
 			}
 		}
 		return ret;
 	}
 
 	if (!t) {
-		tab = tables;
+		t = r->table;
 		t_i = 0;
-		while (tab) {
-			if (nvp_searchi(tab->columns,col) > -1)
+		while (t) {
+			if (nvp_searchi(t->t->columns,col) > -1) {
+				tab = t->t;
 				break;
+			}
 			t_i++;
-			tab = tab->next;
+			t = t->next;
 		}
 	}else{
 		t_i = 0;
@@ -369,7 +372,6 @@ column_ref_t *column_find(char* str, result_t *r)
 }
 
 /* fetch the actual data refered to by a column reference in a row */
-/* TODO: support COUNT() */
 nvp_t *column_fetch_data(row_t *row, column_ref_t *col)
 {
 	nvp_t *r;

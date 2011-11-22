@@ -113,6 +113,7 @@ table_t *table_find(char* name);
 void table_free(char* name);
 int table_write(table_t *t, char* of);
 table_ref_t *table_resolve(char* str, result_t *r);
+void table_free_refs(table_ref_t *t);
 
 /* defined in nvp.c */
 nvp_t *nvp_create(char* name, char* value);

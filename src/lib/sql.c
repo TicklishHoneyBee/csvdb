@@ -102,6 +102,117 @@ column_end:
 	return r;
 }
 
+/* JOIN processing */
+table_ref_t *sql_join(result_t *r, nvp_t *pt, nvp_t **end, table_ref_t *tbl)
+{
+	nvp_t *n = nvp_search(pt,"JOIN");
+	table_ref_t *ret = tbl;
+	table_ref_t *tab;
+	if (!n)
+		return 0;
+
+	n = pt->next;
+	/* for now, we'll just ignore these */
+	if (!strcasecmp(n->value,"LEFT")) {
+		n = n->next;
+	}else if (!strcasecmp(n->value,"RIGHT")) {
+		n = n->next;
+	}else if (!strcasecmp(n->value,"INNER")) {
+		n = n->next;
+	}else if (!strcasecmp(n->value,"OUTER")) {
+		n = n->next;
+	}else if (!strcasecmp(n->value,"NATURAL")) {
+		n = n->next;
+	}else if (!strcasecmp(n->value,"CROSS")) {
+		n = n->next;
+	}
+	if (strcasecmp(n->value,"JOIN")) {
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+		table_free_refs(ret);
+		return NULL;
+	}
+
+	n = n->next;
+
+	do {
+		tab = table_resolve(n->value,r);
+		if (!tab) {
+			table_free_refs(ret);
+			return NULL;
+		}
+
+		tbl->next = tab;
+
+		n = n->next;
+
+		if (n && !strcasecmp(n->value,"AS")) {
+			if (!n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near 'AS' \"%s\"\n",r->q);
+				table_free_refs(ret);
+				return NULL;
+			}
+			n = n->next;
+			tab->alias = strdup(n->value);
+			n = n->next;
+		}
+
+		tbl = tab;
+	} while (n && !strcmp(n->value,","));
+
+	/* TODO: ON support */
+	if (n && !strcasecmp(n->value,"ON")) {
+		error(r,CSVDB_ERROR_UNSUPPORTED,"'ON' keyword unsupported \"%s\"\n",r->q);
+		table_free_refs(ret);
+		return NULL;
+	}else{
+		row_t *l;
+		row_t *b;
+		row_t *rw;
+		table_ref_t *t = ret;
+		int c = 1;
+		int tc = 0;
+		int ctc = 0;
+		int i;
+		while (t) {
+			t = t->next;
+			tc++;
+		}
+		t = ret;
+		while (t) {
+			rw = t->t->rows;
+			l = r->join;
+			while (rw) {
+				if (!l) {
+					l = row_add(&r->join,c);
+					for (i=0; i<tc; i++) {
+						row_add(&l->t_data,c);
+					}
+					c++;
+				}
+				b = l->t_data;
+				for (i=0; i<ctc; i++) {
+					b = b->next;
+				}
+				if (!b) {
+					error(r,CSVDB_ERROR_INTERNAL,"internal error in compiling join data\n");
+					table_free_refs(ret);
+					return NULL;
+				}
+				b->data = rw->data;
+				l = l->next;
+				rw = rw->next;
+			}
+			ctc++;
+			t = t->next;
+		}
+
+	}
+
+	*end = n;
+
+	return ret;
+}
+
 /* get the string "SELECT x FROM y ..." from a sub query starting at node start,
  * and return the next node after the end of the query in end */
 char* sql_subquery_getstring(result_t *or, nvp_t *start, nvp_t **end)
@@ -342,6 +453,7 @@ void sql_select(result_t *r)
 	nvp_t *of = NULL;
 	nvp_t *n = r->keywords;
 	nvp_t *q = nvp_search(r->keywords,"FROM");
+	nvp_t *cc = q;
 	if (!q) {
 		error(r,CSVDB_ERROR_TABLEREF,"no table or file specified: \"%s\"\n",r->q);
 		return;
@@ -353,8 +465,26 @@ void sql_select(result_t *r)
 
 	q = q->next;
 
-	/* TODO: support JOIN */
-	r->table = table_resolve(q->value,r);
+	tbl = table_resolve(q->value,r);
+	if (!tbl)
+		return;
+
+	if (q->next && q->next->next && !strcasecmp(q->next->value,"AS")) {
+		q = q->next->next;
+		tbl->alias = strdup(q->value);
+	}
+
+	k = nvp_searchi(q,"JOIN");
+	lim1 = nvp_searchi(q,"(");
+	if (lim1 < 0)
+		lim1 = nvp_searchi(q,"(SELECT");
+
+	if (k > -1 && ((lim1 < 0) || k < lim1)) {
+		if (!(tbl = sql_join(r,q,&cc,tbl)))
+			return;
+	}
+
+	r->table = tbl;
 
 	if (!r->table)
 		return;
@@ -438,6 +568,8 @@ void sql_select(result_t *r)
 		lim1 = 0;
 		n = n->next;
 	}
+
+	n = cc;
 
 	while (n) {
 		if (is_keyword(n->value)) {
@@ -613,7 +745,7 @@ void sql_select(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(q,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							q->num |= CMP_STRING;
 					}else{
 						l = nvp_add(&r->where,col->name,n->value);
@@ -622,7 +754,7 @@ void sql_select(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(l,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							l->num |= CMP_STRING;
 					}
 					column_free(col);
@@ -767,7 +899,7 @@ void sql_select(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(q,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							q->num |= CMP_STRING;
 					}else{
 						l = nvp_add(&r->having,col->name,n->value);
@@ -776,7 +908,7 @@ void sql_select(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(l,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							l->num |= CMP_STRING;
 					}
 					n = n->next;
@@ -1532,7 +1664,7 @@ void sql_update(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(q,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							q->num |= CMP_STRING;
 					}else{
 						l = nvp_add(&r->where,col->name,n->value);
@@ -1541,7 +1673,7 @@ void sql_update(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(l,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							l->num |= CMP_STRING;
 					}
 					column_free(col);
@@ -1772,7 +1904,7 @@ void sql_delete(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(q,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							q->num |= CMP_STRING;
 					}else{
 						l = nvp_add(&r->where,col->name,n->value);
@@ -1781,7 +1913,7 @@ void sql_delete(result_t *r)
 							remove_wildcard(buff,n->value);
 							nvp_set(l,col->name,buff);
 						}
-						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")))
+						if (is_numeric(n->value) || (n->name && !strcmp(n->name,"'")) || !strcmp(n->value,"NULL"))
 							l->num |= CMP_STRING;
 					}
 					column_free(col);

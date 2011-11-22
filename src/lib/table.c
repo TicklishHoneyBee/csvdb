@@ -491,3 +491,25 @@ table_ref_t *table_resolve(char* str, result_t *r)
 
 	return NULL;
 }
+
+void table_free_refs(table_ref_t *t)
+{
+	table_ref_t *n;
+	if (!t)
+		return;
+
+	if (t->alias && t->alias[0])
+		free(t->alias);
+
+	n = t->next;
+
+	while (n) {
+		t->next = n->next;
+		if (n->alias && n->alias[0])
+			free(n->alias);
+		free(n);
+		n = t->next;
+	}
+
+	free(t);
+}

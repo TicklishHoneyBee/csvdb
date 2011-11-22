@@ -343,9 +343,16 @@ void result_where(result_t *r)
 				row = row->next;
 				continue;
 			}
-			rw = row_add(&r->result,row->key);
-			rw->t_data = row_create(row->key);
-			rw->t_data->data = row->data;
+			if (!r->join) {
+				rw = row_add(&r->result,row->key);
+				rw->t_data = row_create(row->key);
+				rw->t_data->data = row->data;
+			}else{
+				rw = row_add(&r->result,row->key);
+				rw->t_data = row->t_data;
+				rw->data = row->data;
+				row->t_data = NULL;
+			}
 		}
 		if (hl && c == tl)
 			break;
@@ -354,6 +361,10 @@ void result_where(result_t *r)
 	if (hl) {
 		nvp_set(r->limit,NULL,"0");
 		nvp_set(r->limit->next,NULL,"-1");
+	}
+	if (r->join) {
+		row_free_keys(r->join);
+		r->join = NULL;
 	}
 }
 
@@ -814,6 +825,7 @@ void result_free(result_t *r)
 	nvp_free_all(r->limit);
 	nvp_free_all(r->count);
 	row_free_all(r->result);
+	table_free_refs(r->table);
 
 	while ((s = r->sub)) {
 		r->sub = s->next;
