@@ -329,6 +329,16 @@ table_t *table_find(char* name)
 {
 	nvp_t *n;
 	table_t *t = tables;
+	char* nm;
+
+	if (name[0] == '`' && (nm = strchr(name+1,'`'))) {
+		char* tmp = nm;
+		*tmp = 0;
+		nm = alloca(strlen(name));
+		strcpy(nm,name+1);
+		name = nm;
+		*tmp = '`';
+	}
 
 	while (t) {
 		n = t->name;
@@ -501,14 +511,11 @@ void table_free_refs(table_ref_t *t)
 	if (t->alias && t->alias[0])
 		free(t->alias);
 
-	n = t->next;
-
-	while (n) {
+	while ((n = t->next)) {
 		t->next = n->next;
 		if (n->alias && n->alias[0])
 			free(n->alias);
 		free(n);
-		n = t->next;
 	}
 
 	free(t);

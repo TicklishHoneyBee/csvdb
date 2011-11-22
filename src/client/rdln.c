@@ -70,10 +70,13 @@ static char* sub_keywords[] = {
 	"ORDER BY",
 	"INTO",
 	"AS",
+	"SELECT",
 	"TABLES",
 	"COLUMNS",
 	"FILE",
 	"DATA INFILE",
+	"JOIN",
+	"ON",
 	"INFILE",
 	"OUTFILE",
 	NULL
@@ -98,14 +101,22 @@ static char* tbl_generator(const char *UNUSED(text), int UNUSED(state))
 {
 	table_t *t = tables;
 	nvp_t *n;
+	char *dt;
+	char buff[1024];
 	size_t l = strlen(text);
 	int f = 0;
 	int i;
+	dt = (char*)text;
+	if (dt[0] == '`') {
+		dt++;
+		l--;
+	}
 	while (t) {
 		n = t->name;
 		while (n) {
-			if (!strncmp(text,n->value,l) && state <= f++) {
-				return strdup(n->value);
+			if (!strncmp(dt,n->value,l) && state <= f++) {
+				sprintf(buff,"%s",n->value);
+				return strdup(buff);
 			}
 			n = n->next;
 		}
@@ -115,12 +126,34 @@ static char* tbl_generator(const char *UNUSED(text), int UNUSED(state))
 	while (t) {
 		n = t->columns;
 		while (n) {
-			if (!strncmp(text,n->value,l) && state <= f++) {
-				return strdup(n->value);
+			if (!strncmp(dt,n->value,l) && state <= f++) {
+				sprintf(buff,"%s.%s",t->name->value,n->value);
+				return strdup(buff);
 			}
 			n = n->next;
 		}
 		t = t->next;
+	}
+	if ((dt = strchr(text,'.'))) {
+		size_t ln;
+		*dt = 0;
+		dt++;
+		if (dt[0] == '`')
+			dt++;
+		ln = strlen(dt);
+		t = table_find((char*)text);
+		if (t) {
+			n = t->columns;
+			while (n) {
+				if (!strncmp(dt,n->value,ln) && state <= f++) {
+					sprintf(buff,"%s.%s",text,n->value);
+					*(dt-1) = '.';
+					return strdup(buff);
+				}
+				n = n->next;
+			}
+		}
+		*(dt-1) = '.';
 	}
 	for (i=0; sub_keywords[i]; i++) {
 		if (!strncasecmp(text,sub_keywords[i],l) && state <= f++)
@@ -148,7 +181,6 @@ static char** csvdb_comp(const char *text, int start, int UNUSED(end))
 	if (!start) {
 		matches = rl_completion_matches(text, key_generator);
 	}else{
-		/* TODO */
 		matches = rl_completion_matches(text, tbl_generator);
 	}
 	return matches;

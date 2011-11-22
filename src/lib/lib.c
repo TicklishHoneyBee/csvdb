@@ -193,10 +193,16 @@ void error(result_t *r, int err, char* str, ...)
 	va_list ap;
 	char buff[1024];
 	nvp_t *n;
+	if (!r)
+		return;
 
 	va_start(ap, str);
 	vsnprintf(buff, 1024, str, ap);
 	va_end(ap);
+
+	/* TODO: should be able to do something like `SET DEBUG ON' to make
+	 * this show without needing to recompile */
+	puts(buff);
 
 	n = nvp_add(&r->error,NULL,buff);
 	n->num = err;

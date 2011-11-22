@@ -92,6 +92,9 @@ void column_free_all(column_ref_t *c)
 	}
 }
 
+/* temporary column reference */
+column_ref_t *cref = NULL;
+
 /* resolve a string to a column in a table in a query */
 column_ref_t *column_resolve(char* str, result_t *r)
 {
@@ -101,6 +104,8 @@ column_ref_t *column_resolve(char* str, result_t *r)
 	char* tmp;
 	char* c;
 	nvp_t *n;
+	int t_i = 0;
+	int r_i;
 	table_ref_t *t = NULL;
 	int l;
 	column_ref_t *ret = NULL;
@@ -132,9 +137,11 @@ column_ref_t *column_resolve(char* str, result_t *r)
 			*tmp = 0;
 		}
 		t = r->table;
+		t_i = 0;
 		while (t) {
 			if (!strcmp(tbl,t->alias) || nvp_search(t->t->name,tbl))
 				break;
+			t_i++;
 			t = t->next;
 		}
 		if (!t) {
@@ -195,6 +202,65 @@ column_ref_t *column_resolve(char* str, result_t *r)
 			}
 		}
 		*tmp = '(';
+	}
+
+	/* this reference doesn't exist in the result, but may be another
+	 * column no referenced in the result */
+
+	if (t) {
+		n = t->t->columns;
+		r_i = 0;
+		while (n) {
+			if (!strcmp(col,n->value)) {
+				if (!cref) {
+					cref = malloc(sizeof(column_ref_t));
+					cref->name = malloc(1024);
+					cref->alias = "";
+					cref->t_index = 0;
+					cref->r_index = 0;
+					cref->keywords = NULL;
+					cref->table = NULL;
+					cref->next = NULL;
+				}
+				strcpy(cref->name,n->value);
+				cref->t_index = t_i;
+				cref->r_index = r_i;
+				cref->table = t->t;
+				return cref;
+			}
+			r_i++;
+			n = n->next;
+		}
+	}else{
+		t = r->table;
+		t_i = 0;
+		while (t) {
+			r_i = 0;
+			n = t->t->columns;
+			while (n) {
+				if (!strcmp(col,n->value)) {
+					if (!cref) {
+						cref = malloc(sizeof(column_ref_t));
+						cref->name = malloc(1024);
+						cref->alias = "";
+						cref->t_index = 0;
+						cref->r_index = 0;
+						cref->keywords = NULL;
+						cref->table = NULL;
+						cref->next = NULL;
+					}
+					strcpy(cref->name,n->value);
+					cref->t_index = t_i;
+					cref->r_index = r_i;
+					cref->table = t->t;
+					return cref;
+				}
+				r_i++;
+				n = n->next;
+			}
+			t_i++;
+			t = t->next;
+		}
 	}
 
 	error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference '%s' \"%s\"\n",str,r->q);
