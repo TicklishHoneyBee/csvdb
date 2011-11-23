@@ -468,5 +468,8 @@ nvp_t *column_fetch_data(row_t *row, column_ref_t *col)
 		r = r->next;
 	}
 
+	if (r && !r->value)
+		return NULL;
+
 	return r;
 }

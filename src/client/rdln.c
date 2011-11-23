@@ -52,6 +52,9 @@ static char* keywords[] = {
 	"SHOW",
 	"LOAD DATA INFILE",
 	"QUIT",
+	"DELETE",
+	"ALTER",
+	"SET",
 	NULL
 };
 

@@ -134,9 +134,9 @@ table_ref_t *sql_join(result_t *r, nvp_t *pt, nvp_t **end, table_ref_t *tbl)
 		return NULL;
 	}
 
-	n = n->next;
-
 	do {
+		n = n->next;
+
 		tab = table_resolve(n->value,r);
 		if (!tab) {
 			table_free_refs(ret);
@@ -1147,6 +1147,7 @@ void sql_load(result_t *r)
 void sql_drop(result_t *r)
 {
 	int p = 0;
+	int tp = 0;
 	int i = 0;
 	table_t *t;
 	nvp_t *l;
@@ -1159,6 +1160,7 @@ void sql_drop(result_t *r)
 
 	l = r->keywords->next;
 	if (!strcmp(l->value,"TEMPORARY")) {
+		tp = 1;
 		l = l->next;
 	}else if (!strcmp(l->value,"PERMANENT")) {
 		p = 1;
@@ -1199,7 +1201,7 @@ void sql_drop(result_t *r)
 		return;
 	}
 
-	if (p || (csvdb_settings&CSVDB_SET_PERMANENT)) {
+	if (p || (!tp && (csvdb_settings&CSVDB_SET_PERMANENT))) {
 		errno = 0;
 		if (unlink(t->name->value) < 0) {
 			error(r,CSVDB_ERROR_FILEREF,"could not permanently drop table file (errno %d)\n",errno);
@@ -1388,19 +1390,22 @@ void sql_insert(result_t *r)
 			while (l) {
 				if (!strcmp(l->value,","))
 					break;
-				if (!strcmp(l->value,")"))
+				if (!strcmp(l->value,")")) {
+					l = l->next;
 					goto end_cols;
+				}
 				l = l->next;
 			}
 			l = l->next;
 		}
+	}else{
+		r->cols = column_find("*",r);
 	}
 end_cols:
 	if (!l) {
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
 	}
-	l = l->next;
 	if (!l) {
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 		return;
@@ -2046,6 +2051,289 @@ end_delete:
 	}
 }
 
+static nvp_t *find_default(nvp_t *n)
+{
+	int d = nvp_searchi(n,"DEFAULT");
+	int c = nvp_searchi(n,",");
+	if (d < 0)
+		return NULL;
+
+	if (c > -1 && c < d)
+		return NULL;
+
+	return nvp_grabi(n,d+1);
+}
+
+void sql_alter(result_t *r)
+{
+	nvp_t *col;
+	nvp_t *t;
+	nvp_t *q;
+	nvp_t *d;
+	row_t *rw;
+	int i;
+	nvp_t *n = r->keywords->next;
+	int ign = 0;
+
+	if (!n) {
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",r->keywords->value,r->q);
+		return;
+	}
+
+	if (!strcasecmp(n->value,"IGNORE")) {
+		ign = 1;
+		n = n->next;
+	}
+	if (strcasecmp(n->value,"TABLE") || !n->next) {
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+		return;
+	}
+	n = n->next;
+	r->table = table_resolve(n->value,r);
+	if (!r->table)
+		return;
+
+	if (!n->next) {
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+		return;
+	}
+
+	do {
+		if (!n || !n->next) {
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+			return;
+		}
+		n = n->next;
+		if (!n->next) {
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+			return;
+		}
+		if (!strcasecmp(n->value,"ADD")) {
+			n = n->next;
+			if (n->next && !strcasecmp(n->value,"COLUMN")) {
+				n = n->next;
+				if (nvp_search(r->table->t->columns,n->value)) {
+					if (ign) {
+						n = nvp_search(n,",");
+						continue;
+					}else{
+						error(
+							r,
+							CSVDB_ERROR_COLUMNREF,
+							"column '%s' already exists in table '%s'\n",
+							n->value,
+							r->table->t->name
+						);
+						return;
+					}
+				}
+				col = nvp_create(NULL,n->value);
+				n = n->next;
+				if (n) {
+					if (!strcasecmp(n->value,"FIRST")) {
+						col->next = r->table->t->columns;
+						r->table->t->columns = col;
+						if (col->next)
+							col->next->prev = col;
+						n = n->next;
+						d = find_default(n);
+						/* TODO: reorder data */
+						rw = r->table->t->rows;
+						while (rw) {
+							if (d) {
+								t = nvp_create(NULL,d->value);
+							}else{
+								t = nvp_create(NULL,NULL);
+							}
+							t->next = rw->data;
+							rw->data = t;
+							if (t->next)
+								t->next->prev = t;
+							rw = rw->next;
+						}
+					}else if (!strcasecmp(n->value,"AFTER")) {
+						if (!n->next) {
+							error(
+								r,
+								CSVDB_ERROR_SYNTAX,
+								"syntax error near '%s' \"%s\"\n",
+								n->value,
+								r->q
+							);
+							return;
+						}
+						n = n->next;
+						t = nvp_search(r->table->t->columns,n->value);
+						if (!t) {
+							error(
+								r,
+								CSVDB_ERROR_COLUMNREF,
+								"column '%s' does not exist in table '%s'\n",
+								n->value,
+								r->table->t->name
+							);
+							return;
+						}
+						i = nvp_searchi(r->table->t->columns,n->value);
+						col->next = t->next;
+						t->next = col;
+						col->prev = t;
+						if (col->next)
+							col->next->prev = col;
+						n = n->next;
+						d = find_default(n);
+						/* TODO: reorder data */
+						rw = r->table->t->rows;
+						while (rw) {
+							t = nvp_grabi(rw->data,i);
+							if (d) {
+								q = nvp_create(NULL,d->value);
+							}else{
+								q = nvp_create(NULL,NULL);
+							}
+							q->next = t->next;
+							t->next = q;
+							q->prev = t;
+							if (t->next)
+								t->next->prev = t;
+							rw = rw->next;
+						}
+					}else{
+						goto ins_last_col;
+					}
+				}else{
+ins_last_col:
+					nvp_push(&r->table->t->columns,col);
+					d = find_default(n);
+					/* reorder data */
+					if (d) {
+						rw = r->table->t->rows;
+						i = nvp_count(r->table->t->columns);
+						i--;
+						while (rw) {
+							while (nvp_count(rw->data) < i) {
+								nvp_add(&rw->data,NULL,NULL);
+							}
+							nvp_add(&rw->data,NULL,d->value);
+							rw = rw->next;
+						}
+					}
+				}
+			}else{
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+				return;
+			}
+			n = nvp_search(n,",");
+		}else if (!strcasecmp(n->value,"ALTER")) {
+			error(r,CSVDB_ERROR_UNSUPPORTED,"ALTER keyword is not currently supported \"%s\"\n",r->q);
+			return;
+			n = n->next;
+		}else if (!strcasecmp(n->value,"CHANGE")) {
+			if (!n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+				return;
+			}
+			n = n->next;
+			if (!strcasecmp(n->value,"COLUMN")) {
+				if (!n->next) {
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+					return;
+				}
+				n = n->next;
+			}
+			if (!n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+				return;
+			}
+			col = nvp_search(r->table->t->columns,n->value);
+			if (!col) {
+				error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
+				return;
+			}
+			n = n->next;
+			nvp_set(col,NULL,n->value);
+			n = nvp_search(n,",");
+		}else if (!strcasecmp(n->value,"MODIFY")) {
+			error(r,CSVDB_ERROR_UNSUPPORTED,"MODIFY keyword is not currently supported \"%s\"\n",r->q);
+			return;
+			n = n->next;
+		}else if (!strcasecmp(n->value,"DROP")) {
+			if (!n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+				return;
+			}
+			n = n->next;
+			if (!strcasecmp(n->value,"COLUMN")) {
+				if (!n->next) {
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+					return;
+				}
+				n = n->next;
+			}
+			i = nvp_searchi(r->table->t->columns,n->value);
+			if (i < 0) {
+				error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
+				return;
+			}
+			col = nvp_grabi(r->table->t->columns,i);
+			if (col->prev) {
+				col->prev->next = col->next;
+				if (col->next)
+					col->next->prev = col->prev;
+				nvp_free(col);
+				rw = r->table->t->rows;
+				while (rw) {
+					col = nvp_grabi(rw->data,i);
+					if (col) {
+						col->prev->next = col->next;
+						if (col->next)
+							col->next->prev = col->prev;
+						nvp_free(col);
+					}
+					rw = rw->next;
+				}
+			}else{
+				r->table->t->columns = col->next;
+				if (col->next)
+					col->next->prev = NULL;
+				nvp_free(col);
+				rw = r->table->t->rows;
+				while (rw) {
+					col = nvp_grabi(rw->data,i);
+					if (col) {
+						rw->data = col->next;
+						if (col->next)
+							col->next->prev = col->prev;
+						nvp_free(col);
+					}
+					rw = rw->next;
+				}
+			}
+		}else if (!strcasecmp(n->value,"RENAME")) {
+			if (!n->next) {
+				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+				return;
+			}
+			/* if the new name ends in '.csv' we're renaming the file,
+			 * otherwise, we're just assigning a new alias */
+			n = n->next;
+			i = strlen(n->value);
+			if (!strcmp(n->value+(i-4),".csv")) {
+				nvp_set(r->table->t->name,NULL,n->value);
+				if (table_write(r->table->t,NULL)) {
+					error(r,CSVDB_ERROR_FILEREF,"unable to save table to file '%s'\n",n->value);
+					return;
+				}
+			}else{
+				nvp_add(&r->table->t->name,NULL,n->value);
+			}
+		}else{
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+			return;
+		}
+	} while (n && !strcmp(n->value,","));
+}
+
 void sql_set(result_t *r)
 {
 	nvp_t *n = r->keywords->next;
@@ -2125,6 +2413,8 @@ result_t *csvdb_query(char* q)
 		sql_delete(r);
 	}else if (!strcasecmp(r->keywords->value,"CREATE")) {
 		sql_create(r);
+	}else if (!strcasecmp(r->keywords->value,"ALTER")) {
+		sql_alter(r);
 	}else if (!strcasecmp(r->keywords->value,"SET")) {
 		sql_set(r);
 	}else{
