@@ -2247,8 +2247,13 @@ ins_last_col:
 			}
 			col = nvp_search(r->table->t->columns,n->value);
 			if (!col) {
-				error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
-				return;
+				if (ign && nvp_search(r->table->t->columns,n->next->value)) {
+					n = nvp_search(n,",");
+					continue;
+				}else{
+					error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
+					return;
+				}
 			}
 			n = n->next;
 			nvp_set(col,NULL,n->value);
@@ -2272,8 +2277,13 @@ ins_last_col:
 			}
 			i = nvp_searchi(r->table->t->columns,n->value);
 			if (i < 0) {
-				error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
-				return;
+				if (ign) {
+					n = nvp_search(n,",");
+					continue;
+				}else{
+					error(r,CSVDB_ERROR_COLUMNREF,"column '%s' does not exist in table '%s'\n",n->value,r->table->t->name);
+					return;
+				}
 			}
 			col = nvp_grabi(r->table->t->columns,i);
 			if (col->prev) {
