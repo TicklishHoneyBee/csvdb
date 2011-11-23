@@ -409,7 +409,8 @@ int table_write(table_t *t, char* of)
 	while (r) {
 		v = r->data;
 		while (v) {
-			fputs(",",f);
+			if (v->prev)
+				fputs(",",f);
 			if (strchr(v->value,',') || strchr(v->value,'\n') || strchr(v->value,' ') || strchr(v->value,'"')) {
 				p = v->value;
 				fputs("\"",f);

@@ -18,6 +18,7 @@
 
 #include "csvdb.h"
 
+unsigned int csvdb_settings = CSVDB_SET_VOID;
 static char* keywords[] = {
 	"SELECT",
 	"ALL",
@@ -130,7 +131,7 @@ int csvdb_print_result(result_t *res)
 				col->num = strlen(col->alias);
 			}else{
 				col->num = strlen(col->name);
-				if (res->table->next) {
+				if (res->table && res->table->next) {
 					tbl = table_resolve(col->table->name->value,res);
 					if (tbl->alias && tbl->alias[0]) {
 						col->num += strlen(tbl->alias)+1;
@@ -182,7 +183,7 @@ int csvdb_print_result(result_t *res)
 			if (col->alias[0]) {
 				printf("| %*s ",col->num,col->alias);
 			}else{
-				if (res->table->next) {
+				if (res->table && res->table->next) {
 					tbl = table_resolve(col->table->name->value,res);
 					if (tbl->alias && tbl->alias[0]) {
 						sprintf(buff,"%s.%s",tbl->alias,col->name);
@@ -235,9 +236,8 @@ void error(result_t *r, int err, char* str, ...)
 	vsnprintf(buff, 1024, str, ap);
 	va_end(ap);
 
-	/* TODO: should be able to do something like `SET DEBUG ON' to make
-	 * this show without needing to recompile */
-	puts(buff);
+	if (csvdb_settings&CSVDB_SET_DEBUG)
+		puts(buff);
 
 	n = nvp_add(&r->error,NULL,buff);
 	n->num = err;

@@ -103,6 +103,11 @@ typedef struct result_s {
 #define CSVDB_ERROR_BADRESULT	9
 #define CSVDB_ERROR_SUBQUERY	10
 
+#define CSVDB_SET_VOID		0
+#define CSVDB_SET_DEBUG		1
+#define CSVDB_SET_PERMANENT	2
+extern unsigned int csvdb_settings;
+
 /* defined in table.c */
 extern table_t *tables;
 table_t *table_add(void);

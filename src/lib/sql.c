@@ -414,6 +414,30 @@ table_name_found:
 	}
 }
 
+/* SHOW SETTINGS */
+void sql_show_settings(result_t *r)
+{
+	row_t *rw;
+	column_add(&r->cols,"setting",NULL,NULL);
+	column_add(&r->cols,"state",NULL,NULL);
+
+	rw = row_add(&r->result,1);
+	nvp_add(&rw->data,NULL,"DEBUG");
+	if (csvdb_settings&CSVDB_SET_DEBUG) {
+		nvp_add(&rw->data,NULL,"ON");
+	}else{
+		nvp_add(&rw->data,NULL,"OFF");
+	}
+
+	rw = row_add(&r->result,1);
+	nvp_add(&rw->data,NULL,"PERMANENT");
+	if (csvdb_settings&CSVDB_SET_PERMANENT) {
+		nvp_add(&rw->data,NULL,"ON");
+	}else{
+		nvp_add(&rw->data,NULL,"OFF");
+	}
+}
+
 /* SHOW ... */
 void sql_show(result_t *r)
 {
@@ -429,6 +453,8 @@ void sql_show(result_t *r)
 		sql_show_tables(r);
 	}else if (!strcasecmp(l->value,"COLUMNS")) {
 		sql_show_columns(r);
+	}else if (!strcasecmp(l->value,"SETTINGS")) {
+		sql_show_settings(r);
 	}else{
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
@@ -1173,7 +1199,7 @@ void sql_drop(result_t *r)
 		return;
 	}
 
-	if (p) {
+	if (p || (csvdb_settings&CSVDB_SET_PERMANENT)) {
 		errno = 0;
 		if (unlink(t->name->value) < 0) {
 			error(r,CSVDB_ERROR_FILEREF,"could not permanently drop table file (errno %d)\n",errno);
@@ -1234,8 +1260,6 @@ void sql_create(result_t *r)
 	char* b;
 	int bc = 0;
 	int ine = 0;
-	nvp_free_all(r->keywords);
-	r->keywords = NULL;
 	b = strdup(r->q);
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
@@ -1315,6 +1339,9 @@ void sql_create(result_t *r)
 		}
 		l = l->next;
 	}
+	if (csvdb_settings&CSVDB_SET_PERMANENT) {
+		table_write(r->table->t,NULL);
+	}
 }
 
 /* INSERT [IGNORE] INTO tbl_name [(col_name,...)] {VALUES | VALUE} ({expr | DEFAULT},...),(...),... */
@@ -1330,11 +1357,9 @@ void sql_insert(result_t *r)
 	int ig = 0;
 	char buff[1024];
 	int key;
-	nvp_free_all(r->keywords);
-	r->keywords = NULL;
 	b = strdup(r->q);
 	if (nvp_count(r->keywords) < 7) {
-		l = nvp_last(r->keywords);
+		l = r->keywords;
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
 		return;
 	}
@@ -1442,6 +1467,9 @@ end_rows:
 
 	row_free_all(r->result);
 	r->result = NULL;
+	if (csvdb_settings&CSVDB_SET_PERMANENT) {
+		table_write(r->table->t,NULL);
+	}
 }
 
 /* UPDATE [IGNORE] table_reference SET col_name1=expr1 [, col_name2=expr2] ... [WHERE where_condition] [ORDER BY ...] [LIMIT row_count] */
@@ -1765,6 +1793,9 @@ void sql_update(result_t *r)
 end_update:
 	row_free_keys(r->result);
 	r->result = NULL;
+	if (csvdb_settings&CSVDB_SET_PERMANENT) {
+		table_write(r->table->t,NULL);
+	}
 }
 
 /* DELETE [IGNORE] FROM tbl_name [WHERE where_condition] [ORDER BY ...] [LIMIT row_count] */
@@ -2010,6 +2041,38 @@ end_delete:
 	/* keys, so we don't destroy the table! */
 	row_free_keys(r->result);
 	r->result = NULL;
+	if (csvdb_settings&CSVDB_SET_PERMANENT) {
+		table_write(r->table->t,NULL);
+	}
+}
+
+void sql_set(result_t *r)
+{
+	nvp_t *n = r->keywords->next;
+	if (!n) {
+		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",r->keywords->value,r->q);
+		return;
+	}
+
+	if (!strcasecmp(n->value,"DEBUG")) {
+		if (!n->next || !strcasecmp(n->next->value,"ON")) {
+			csvdb_settings |= CSVDB_SET_DEBUG;
+		}else if (n->next && !strcasecmp(n->next->value,"OFF")) {
+			csvdb_settings &= ~CSVDB_SET_DEBUG;
+		}else{
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+			return;
+		}
+	}else if (!strcasecmp(n->value,"PERMANENT")) {
+		if (!n->next || !strcasecmp(n->next->value,"ON")) {
+			csvdb_settings |= CSVDB_SET_PERMANENT;
+		}else if (n->next && !strcasecmp(n->next->value,"OFF")) {
+			csvdb_settings &= ~CSVDB_SET_PERMANENT;
+		}else{
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
+			return;
+		}
+	}
 }
 
 result_t *csvdb_query(char* q)
@@ -2062,6 +2125,8 @@ result_t *csvdb_query(char* q)
 		sql_delete(r);
 	}else if (!strcasecmp(r->keywords->value,"CREATE")) {
 		sql_create(r);
+	}else if (!strcasecmp(r->keywords->value,"SET")) {
+		sql_set(r);
 	}else{
 		error(r,CSVDB_ERROR_SYNTAX,"unknown keyword '%s'\n",r->keywords->value);
 	}
