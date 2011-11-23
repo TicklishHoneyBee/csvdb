@@ -47,7 +47,7 @@ Start the csvdb shell
 SELECT
     [ALL | DISTINCT]
     select_expr [, select_expr ...]
-    [FROM {table_reference | file_reference}
+    FROM {table_reference | file_reference}
     [WHERE where_condition]
     [GROUP BY {col_name | expr} [, ... ]
       [HAVING where_condition]]
@@ -69,6 +69,10 @@ LOAD DATA INFILE [WITHOUT NAMES | APACHE] 'file_name'
 SHOW TABLES
     [LIKE 'pattern']
 .TP
+SHOW SETTINGS
+.TP
+SET setting state
+.TP
 UPDATE [IGNORE] table_reference
     SET col_name1=expr1 [, col_name2=expr2] ...
     [WHERE where_condition]
@@ -86,6 +90,10 @@ DELETE [IGNORE] FROM tbl_name
     [WHERE where_condition]
     [ORDER BY ...]
     [LIMIT row_count]
+.TP
+ALTER [IGNORE] TABLE tbl_name
+    [alter_specification [, alter_specification] ...]
+.TP
 .SH AUTHOR
 Written by Lisa Milne.
 .SH COPYRIGHT
