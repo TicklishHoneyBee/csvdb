@@ -127,7 +127,11 @@ static char* tbl_generator(const char *UNUSED(text), int UNUSED(state))
 		n = t->columns;
 		while (n) {
 			if (!strncmp(dt,n->value,l) && state <= f++) {
-				sprintf(buff,"%s.%s",t->name->value,n->value);
+				if (t->name->next) {
+					sprintf(buff,"%s.%s",t->name->next->value,n->value);
+				}else{
+					sprintf(buff,"%s.%s",t->name->value,n->value);
+				}
 				return strdup(buff);
 			}
 			n = n->next;

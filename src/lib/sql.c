@@ -28,7 +28,7 @@ unsigned int ticks()
 }
 
 /* split a query into keywords */
-nvp_t *sql_split(char* q, int bs)
+nvp_t *sql_split(char* q)
 {
 	nvp_t *r = NULL;
 	char c;
@@ -69,11 +69,14 @@ nvp_t *sql_split(char* q, int bs)
 			continue;
 		}else if (c == '\n') {
 			continue;
-		}else if (c == ',' || c == ' ' || (bs && (c == '(' || c == ')'))) {
+		}else if (c == ',' || c == ' ' || c == '(' || c == ')') {
 column_end:
 			buff[b] = 0;
+			/* splitting on parenthesis, but don't destroy functions */
+			if ((c == '(' || c == ')') && b > 4 && (!strncasecmp(buff,"COUNT",5) || (b > 5 && !strncasecmp(buff,"COLUMN",6))))
+				goto push_char;
 			if (!b) {
-				if (c == ',' || (bs && (c == '(' || c == ')'))) {
+				if (c == ',' || c == '(' || c == ')') {
 					sprintf(buff,"%c",c);
 				}else{
 					continue;
@@ -87,7 +90,7 @@ column_end:
 			}
 			nvp_add(&r,n,buff);
 			if (b) {
-				if (c == ',' || (bs && (c == '(' || c == ')'))) {
+				if (c == ',' || c == '(' || c == ')') {
 					sprintf(buff,"%c",c);
 					nvp_add(&r,NULL,buff);
 				}
@@ -95,6 +98,7 @@ column_end:
 			b = 0;
 			continue;
 		}
+push_char:
 		if (b < 1023)
 			buff[b++] = c;
 	}
@@ -105,11 +109,9 @@ column_end:
 /* JOIN processing */
 table_ref_t *sql_join(result_t *r, nvp_t *pt, nvp_t **end, table_ref_t *tbl)
 {
-	nvp_t *n = nvp_search(pt,"JOIN");
+	nvp_t *n;
 	table_ref_t *ret = tbl;
 	table_ref_t *tab;
-	if (!n)
-		return 0;
 
 	n = pt->next;
 	/* for now, we'll just ignore these */
@@ -126,7 +128,7 @@ table_ref_t *sql_join(result_t *r, nvp_t *pt, nvp_t **end, table_ref_t *tbl)
 	}else if (!strcasecmp(n->value,"CROSS")) {
 		n = n->next;
 	}
-	if (strcasecmp(n->value,"JOIN")) {
+	if (strcasecmp(n->value,"JOIN") && strcasecmp(n->value,",")) {
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' \"%s\"\n",n->value,r->q);
 		table_free_refs(ret);
 		return NULL;
@@ -474,7 +476,10 @@ void sql_select(result_t *r)
 		tbl->alias = strdup(q->value);
 	}
 
+	/* support multiple tables using implicit or explicit JOIN's */
 	k = nvp_searchi(q,"JOIN");
+	if (k < 0 && q->next && !strcmp(q->next->value,","))
+		k = nvp_searchi(q,",");
 	lim1 = nvp_searchi(q,"(");
 	if (lim1 < 0)
 		lim1 = nvp_searchi(q,"(SELECT");
@@ -1232,7 +1237,6 @@ void sql_create(result_t *r)
 	nvp_free_all(r->keywords);
 	r->keywords = NULL;
 	b = strdup(r->q);
-	r->keywords = sql_split(b,1);
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
@@ -1329,7 +1333,6 @@ void sql_insert(result_t *r)
 	nvp_free_all(r->keywords);
 	r->keywords = NULL;
 	b = strdup(r->q);
-	r->keywords = sql_split(b,1);
 	if (nvp_count(r->keywords) < 7) {
 		l = nvp_last(r->keywords);
 		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
@@ -2019,7 +2022,7 @@ result_t *csvdb_query(char* q)
 	r->time = ticks();
 	r->ar = 0;
 	r->q = strdup(q);
-	r->keywords = sql_split(q,0);
+	r->keywords = sql_split(q);
 	r->table = NULL;
 	r->cols = NULL;
 	r->where = NULL;

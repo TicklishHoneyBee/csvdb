@@ -200,12 +200,15 @@ column_ref_t *column_resolve(char* str, result_t *r)
 					return column_resolve(n->value,r);
 				}
 			}
+		}else if (!strcasecmp(col,"COUNT")) {
+			*tmp = '(';
+			return NULL;
 		}
 		*tmp = '(';
 	}
 
 	/* this reference doesn't exist in the result, but may be another
-	 * column no referenced in the result */
+	 * column not referenced in the result */
 
 	if (t) {
 		n = t->t->columns;
