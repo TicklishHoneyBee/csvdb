@@ -3,7 +3,7 @@ AM_LDFLAGS =
 
 bin_PROGRAMS = csvdb
 ## dynamic lib later
-noinst_LIBRARIES = libcsvdb.a
+lib_LTLIBRARIES = libcsvdb.la
 
 ## vars
 topinc = $(top_srcdir)/inc
@@ -19,23 +19,26 @@ csvdb_SOURCES += client/tty.c
 endif
 csvdb_SOURCES += client/rdln.c
 csvdb_CPPFLAGS += -I$(topinc)
-csvdb_LDADD += libcsvdb.a
+csvdb_LDADD += libcsvdb.la
 if USE_READLINE
 csvdb_LDADD += $(READLINE_LIBS)
 endif
 
-libcsvdb_a_SOURCES =
-libcsvdb_a_CPPFLAGS =
-libcsvdb_a_SOURCES += lib/lib.c
-libcsvdb_a_SOURCES += lib/nvp.c
-libcsvdb_a_SOURCES += lib/result.c
-libcsvdb_a_SOURCES += lib/sql.c
-libcsvdb_a_SOURCES += lib/table.c
-libcsvdb_a_SOURCES += lib/row.c
-libcsvdb_a_SOURCES += lib/column.c
-libcsvdb_a_CPPFLAGS += -I$(topinc)
+libcsvdb_la_SOURCES =
+libcsvdb_la_CPPFLAGS =
+libcsvdb_la_SOURCES += lib/lib.c
+libcsvdb_la_SOURCES += lib/nvp.c
+libcsvdb_la_SOURCES += lib/result.c
+libcsvdb_la_SOURCES += lib/sql.c
+libcsvdb_la_SOURCES += lib/table.c
+libcsvdb_la_SOURCES += lib/row.c
+libcsvdb_la_SOURCES += lib/column.c
+libcsvdb_la_CPPFLAGS += -I$(topinc)
 
 ## we don't install headers by default now, so just list them here
 EXTRA_csvdb_SOURCES =
 EXTRA_csvdb_SOURCES += $(topinc)/csvdb.h
 EXTRA_csvdb_SOURCES += $(topinc)/csvdb-client.h
+
+##headers for library
+include_HEADERS = $(topinc)/csvdb.h

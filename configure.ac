@@ -24,6 +24,7 @@ AM_INIT_AUTOMAKE([foreign])
 
 AC_PROG_CC
 AC_PROG_RANLIB
+AC_PROG_LIBTOOL
 
 CFLAGS="${CFLAGS} -Wall -ansi -pedantic -D_GNU_SOURCE"
 
