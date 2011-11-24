@@ -17,6 +17,7 @@ section.footer {text-align:center; font-size:10px;}
 .bold {font-weight:bold;}
 .key {font-weight:bold; font-style:italic; font-size:12px; color:#505050;}
 .plain {text-decoration:none; color:#000000;}
+.small {font-size:10px;}
 	</style>
 </head>
 <body>
@@ -82,20 +83,23 @@ csvdb
 
 	<section id="queries">
 		<header>Queries</header>
-<p>csvDB has a fair - but nowhere near complete - subset of SQL available, currently this is primarily focused on searching tables/files.
-
-		<ul class="none">
-			<li><a href="#q-select">SELECT</a></li>
-			<li><a href="#q-load">LOAD DATA</a></li>
-			<li><a href="#q-drop">DROP</a></li>
-			<li><a href="#q-show">SHOW TABLES</a></li>
-			<li><a href="#q-describe">SHOW COLUMNS</a></li>
-			<li><a href="#q-describe">DESCRIBE</a></li>
-			<li><a href="#q-update">UPDATE</a></li>
-			<li><a href="#q-insert">INSERT</a></li>
-			<li><a href="#q-create">CREATE</a></li>
-			<li><a href="#q-delete">DELETE</a></li>
-		</ul>
+<p>csvDB has a fair - but nowhere near complete - subset of SQL available.</p>
+<p class="small">The query documentation that follows applies to csvDB version 0.4 and above.</p>
+	<ul class="none">
+		<li><a href="#q-select">SELECT</a></li>
+		<li><a href="#q-load">LOAD DATA</a></li>
+		<li><a href="#q-drop">DROP</a></li>
+		<li><a href="#q-show">SHOW TABLES</a></li>
+		<li><a href="#q-show">SHOW SETTINGS</a></li>
+		<li><a href="#q-describe">SHOW COLUMNS</a></li>
+		<li><a href="#q-describe">DESCRIBE</a></li>
+		<li><a href="#q-update">UPDATE</a></li>
+		<li><a href="#q-insert">INSERT</a></li>
+		<li><a href="#q-create">CREATE</a></li>
+		<li><a href="#q-delete">DELETE</a></li>
+		<li><a href="#q-alter">ALTER TABLE</a></li>
+		<li><a href="#q-set">SET</a></li>
+	</ul>
 <p><a href="#">Back to Menu</a></p>
 	</section>
 
@@ -105,7 +109,7 @@ csvdb
 SELECT
 &nbsp;&nbsp;&nbsp;&nbsp;[ALL | DISTINCT]
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">select_expr</span> [, <span class="key">select_expr ...</span>]
-&nbsp;&nbsp;&nbsp;&nbsp;[FROM {<span class="key">table_reference</span> | <span class="key">file_reference</span>}
+&nbsp;&nbsp;&nbsp;&nbsp;FROM {<span class="key">table_reference</span> | <span class="key">file_reference</span>} [AS <span class="key">tbl_alias</span>] [{ , | JOIN} {<span class="key">table_reference</span> | <span class="key">file_reference</span>} [AS <span class="key">tbl_alias</span>]]
 &nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[GROUP BY {<span class="key">col_name</span> | <span class="key">expr</span>} [, <span class="key">...</span> ]
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[HAVING <span class="key">where_condition</span>]]
@@ -114,16 +118,20 @@ SELECT
 &nbsp;&nbsp;&nbsp;&nbsp;[LIMIT {[<span class="key">offset</span>,] <span class="key">row_count</span> | <span class="key">row_count</span> OFFSET <span class="key">offset</span>}]
 &nbsp;&nbsp;&nbsp;&nbsp;[INTO OUTFILE '<span class="key">file_name</span>']
 </pre>
-<p>SELECT is used to retrieve rows selected from one table; UNION, JOIN, and subqueries are not currently supported.</p>
+<p>SELECT is used to retrieve rows selected from tables list in <span class="key">table_reference</span></p>
 <p>The most commonly used clauses of SELECT statements are:</p>
 <ul>
 	<li>Each <span class="key">select_expr</span> indicates a column that you want to retrieve. There must be at least one <span class="key">select_expr</span>.</li>
-	<li><span class="key">table_reference</span> or <span class="key">file_reference</span> indicates the table or file from which to retrieve rows.</li>
+	<li><span class="key">table_reference</span> or <span class="key">file_reference</span> indicates the table/s or file/s from which to retrieve rows.</li>
 	<li>The WHERE clause, if given, indicates the condition or conditions that rows must satisfy to be selected. <span class="key">where_condition</span> is an expression that evaluates to true for each row to be selected. The statement selects all rows if there is no WHERE clause.</li>
 </ul>
-<p>The list of <span class="key">select_expr</span> terms comprises the list of columns to retrieve. Terms specify a column or expression or * can be used as shorthand to select all columns:</p>
+<p>The list of <span class="key">select_expr</span> terms comprises the list of columns to retrieve. Terms specify a column or expression, or * can be used as shorthand to select all columns:</p>
 <pre>
 SELECT * FROM table;
+</pre>
+<p><span class="key">table_name</span>.* can be used to select all columns from the named table:</p>
+<pre>
+SELECT tbl1.* , tlb2.col1 FROM tbl1 JOIN tbl2;
 </pre>
 <p>The * expression is specially optimised, so is more efficient, and faster than specifying all rows individually.</p>
 <p>A <span class="key">select_expr</span> can be given an alias using AS <span class="key">alias_name</span>. The alias is used as the expression's column name and can be used in GROUP BY, ORDER BY, and WHERE clauses. For example:</p>
@@ -140,16 +148,27 @@ SELECT columna c FROM mytable ORDER BY c;
 SELECT COLUMN(1) FROM mytable;
 </pre>
 <p>This selects the first column from mytable.</p>
+<p>Column names and position references can optionally be prefixed with <span class="key">table_name</span>.</p>
+<pre>
+SELECT tbl1.COLUMN(1) , tlb2.col1 FROM tbl1 JOIN tbl2;
+</pre>
 <p>The DISTINCT keyword will select only rows where the column has a unique value. ALL will select all rows regardless of duplicate values, this is the default behaviour.</p>
 
 <p>The <span class="key">table_reference</span> or <span class="key">file_reference</span> indicates the table or file from which to retrieve rows.</p>
 <p><span class="key">table_reference</span> or <span class="key">file_reference</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
-<p>There is currently no support for assigning table aliases in a SELECT query, therefore this will throw an error:</p>
+<p>A <span class="key">table_reference</span> can be given an alias using AS <span class="key">alias_name</span>. The alias is used as the table's name and can be used in GROUP BY, ORDER BY, and WHERE clauses. For example:</p>
 <pre>
 SELECT columna FROM mytable AS t;
 </pre>
+<p>Columns from multiple tables can be retrieved using implicit or explicit JOINs:</p>
+<pre>
+SELECT * FROM table1 , table2;
+SELECT * FROM table1 JOIN table2;
+</pre>
+<p>The ON keyword for conditional joins is not currently supported. Rows are always joined by the tables' internal keys.</p>
+<p>LEFT, RIGHT, INNER, OUTER keywords for JOINs are currently ignored.</p>
 
-<p><span class="key">where_condition</span> is currently limited to comparisons between a column and a value only:</p>
+<p><span class="key">where_condition</span> is used to compare a column with a value, or another column:</p>
 <pre>
 SELECT columna FROM mytable WHERE columnb = 'something';
 SELECT columna FROM mytable WHERE columnb LIKE 'something';
@@ -160,12 +179,9 @@ SELECT columna FROM mytable WHERE columnc &lt; 3;
 SELECT columna FROM mytable WHERE columnc &gt; 3;
 SELECT columna FROM mytable WHERE columnc &lt;= 3;
 SELECT columna FROM mytable WHERE columnc &gt;= 3;
-</pre>
-<p>Enclosing values in single quotes, as shown above, is optional, the result is that comparison between columns is not supported.</p>
-<pre>
 SELECT columna FROM mytable WHERE columnb = columna;
 </pre>
-<p>This will compare the string 'columna' against the value of columnb. However the keyword NULL will only match against a value which does not exist. This typically only happens where a row in csv file has less columns than the table.</p>
+<p>The keyword NULL will only match against a value which does not exist. This typically only happens where a row in a csv file has less columns than the table.</p>
 <pre>
 SELECT columna FROM mytable WHERE columnb IS NULL;
 </pre>
@@ -268,6 +284,10 @@ SHOW TABLES
 </pre>
 <p>SHOW TABLES lists tables loaded in the current csvDB session, and any aliases set for those tables.</p>
 <p>The LIKE clause, if present, will result in only tables matching <span class="key">pattern</span> being listed.</p>
+<pre>
+SHOW SETTINGS
+</pre>
+<p>SHOW SETTINGS lists the current session settings.</p>
 <p><a href="#queries">Back to Queries Menu</a></p>
 	</section>
 
@@ -336,13 +356,56 @@ DELETE [IGNORE] FROM <span class="key">tbl_name</span>
 &nbsp;&nbsp;&nbsp;&nbsp;[WHERE <span class="key">where_condition</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[ORDER BY <span class="key">...</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[LIMIT <span class="key">row_count</span>]
-</pre></p>
+</pre>
 <p>The DELETE statement deletes rows from <span class="key">tbl_name</span> and returns a count of the number of deleted rows.</p>
 <p>The IGNORE keyword currently has no effect.</p>
 <p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
 <p>The WHERE clause, if given, specifies the conditions that identify which rows to delete. With no WHERE clause, all rows are deleted.</p>
 <p>If the ORDER BY clause is specified, the rows are deleted in the order that is specified.</p>
 <p>The LIMIT clause places a limit on the number of rows that can be deleted.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-alter">
+		<header>ALTER TABLE</header>
+<pre>
+ALTER [IGNORE] TABLE <span class="key">tbl_name</span>
+&nbsp;&nbsp;{ ADD [COLUMN] <span class="key">col_name</span> <span class="key">column_definition</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[FIRST | AFTER <span class="key">col_name</span> ]
+&nbsp;&nbsp;| CHANGE [COLUMN] <span class="key">col_name</span> <span class="key">new_col_name</span> <span class="key">column_definition</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[FIRST|AFTER <span class="key">col_name</span>]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[FIRST | AFTER <span class="key">col_name</span>]
+&nbsp;&nbsp;| DROP [COLUMN] <span class="key">col_name</span>
+&nbsp;&nbsp;| RENAME [TO] <span class="key">new_tbl_name</span>}
+</pre>
+<p>ALTER TABLE changes the structure of a table. For example, you can add or delete columns, or rename columns or the table itself.</p>
+<p><span class="key">tbl_name</span> can be either a filename, an alias for a table or FILE. The FILE keyword references the first table in the current session's table list, see <a href="#q-show" class="plain">SHOW TABLES</a> to check the table list.</p>
+<p><span class="key">col_name</span> must refer to an existing column in the table.</p>
+<p><span class="key">new_col_name</span> is the name to change the column to, <span class="key">new_col_name</span> must be unique within the table.</p>
+<p>If the IGNORE keyword is set, no error will be generated if a specified modification has previously been applied.</p>
+<p><span class="key">new_tbl_name</span> can either be a string containing a valid filename, in a writable directory, or a new alias for the table.</p>
+<p>If <span class="key">new_tbl_name</span> is a filename (recognised by a .csv ending), the table data will be copied to the new file, the old file deleted, and the table dropped from the current session. The new file will then be loaded. Renaming with a filename is therefore functionally equivalent to:</p>
+<pre>
+SELECT * FROM tbl_name INTO OUTFILE new_tbl_name;
+DROP PERMANENT TABLE tbl_name;
+LOAD DATA INFILE new_tbl_name;
+</pre>
+<p><span class="key">column_definition</span> is mostly ignored, however if a DEFAULT is set when adding a column, all rows will have the new column set to this default value.</p>
+<p><a href="#queries">Back to Queries Menu</a></p>
+	</section>
+
+	<section id="q-set">
+		<header>SET</header>
+<pre>
+SET <span class="key">setting</span> {ON | OFF}
+</pre>
+<p>SET is used to change the state of a session configuration setting.</p>
+<p><span class="key">setting</span> may be one of:</p>
+<ul>
+	<li>DEBUG - if ON error messages will show immediately, without waiting for a query to finish.</li>
+	<li>PERMANENT - if ON all changes to tables will be written to file, if OFF changes will affect the current session only.</li>
+</ul>
+<p>In all cases OFF is the default setting, and settings will not be kept across sessions.</p>
 <p><a href="#queries">Back to Queries Menu</a></p>
 	</section>
 
