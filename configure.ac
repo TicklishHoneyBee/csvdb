@@ -45,11 +45,7 @@ AS_IF([test "x${with_readline}" != "xno"], [dnl
 	], [])])
 AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
 
-AC_CHECK_FUNC([strcasestr], [:], [dnl
-	AC_MSG_ERROR([dnl
-Your libc isn't blessed with an implementation of the strcasestr() dnl
-function.  Get one and try again.
-])])
+AC_CHECK_FUNCS([strcasestr])
 
 
 AC_CONFIG_FILES([Makefile])

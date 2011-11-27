@@ -67,6 +67,7 @@ static char* sub_keywords[] = {
 	"FROM",
 	"WHERE",
 	"LIMIT",
+	"LIKE",
 	"OFFSET",
 	"GROUP BY",
 	"HAVING",
@@ -76,12 +77,15 @@ static char* sub_keywords[] = {
 	"SELECT",
 	"TABLES",
 	"COLUMNS",
+	"TABLE",
+	"COLUMN",
 	"FILE",
 	"DATA INFILE",
 	"JOIN",
 	"ON",
 	"INFILE",
 	"OUTFILE",
+	"FILE",
 	NULL
 };
 

@@ -16,7 +16,41 @@
 * with this program.  If not, see <http://www.gnu.org/licenses/>
 ************************************************************************/
 
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
+
 #include "csvdb.h"
+
+#ifndef HAVE_STRCASESTR
+char* strcasestr(const char* haystack, const char* needle)
+{
+	char* h = alloca(strlen(haystack)+1);
+	char* n = alloca(strlen(needle)+1);
+	char* t;
+	int i;
+	for (i=0; haystack[i]; i++) {
+		if (isupper(haystack[i])) {
+			h[i] = tolower(haystack[i]);
+			continue;
+		}
+		h[i] = haystack[i];
+	}
+	h[i] = 0;
+	for (i=0; needle[i]; i++) {
+		if (isupper(needle[i])) {
+			n[i] = tolower(needle[i]);
+			continue;
+		}
+	}
+
+	t = strstr(h,n);
+	if (!t)
+		return NULL;
+
+	return (char*)(haystack+(t-n));
+}
+#endif /* !HAVE_STRCASESTR */
 
 /* compare q->value using q->num against row value l->value in result r */
 static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)

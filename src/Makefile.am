@@ -2,7 +2,7 @@ AM_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE 200809L
 AM_LDFLAGS =
 
 bin_PROGRAMS = csvdb
-## dynamic lib later
+## libtool library
 lib_LTLIBRARIES = libcsvdb.la
 
 ## vars
@@ -35,10 +35,11 @@ libcsvdb_la_SOURCES += lib/row.c
 libcsvdb_la_SOURCES += lib/column.c
 libcsvdb_la_CPPFLAGS += -I$(topinc)
 
+
 ## we don't install headers by default now, so just list them here
 EXTRA_csvdb_SOURCES =
 EXTRA_csvdb_SOURCES += $(topinc)/csvdb.h
 EXTRA_csvdb_SOURCES += $(topinc)/csvdb-client.h
 
-##headers for library
+## headers for library
 include_HEADERS = $(topinc)/csvdb.h
