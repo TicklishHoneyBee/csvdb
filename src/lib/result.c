@@ -42,7 +42,9 @@ char* strcasestr(const char* haystack, const char* needle)
 			n[i] = tolower(needle[i]);
 			continue;
 		}
+		n[i] = needle[i];
 	}
+	n[i] = 0;
 
 	t = strstr(h,n);
 	if (!t)
