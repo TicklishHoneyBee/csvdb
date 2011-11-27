@@ -50,7 +50,7 @@ char* strcasestr(const char* haystack, const char* needle)
 	if (!t)
 		return NULL;
 
-	return (char*)(haystack+(t-n));
+	return (char*)(haystack+(t-h));
 }
 #endif /* !HAVE_STRCASESTR */
 
