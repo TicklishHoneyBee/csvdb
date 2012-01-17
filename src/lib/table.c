@@ -205,6 +205,8 @@ column_end:
 
 table_t *table_load_csv(char* file, nvp_t *cols)
 {
+	static char *envi = (char*)-1;
+	static char delimiter = ',';
 	FILE *f;
 	char c = ' ';
 	char fbuff[2048];
@@ -231,6 +233,9 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	f = fopen(file,"r");
 	if (!f)
 		return NULL;
+
+	if (envi == (char*)-1 && (envi = getenv("DBDELIMITER")) != NULL)
+		delimiter = envi[0];
 
 	t = table_add();
 	t->name = nvp_create(NULL,file);
@@ -283,7 +288,7 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 			continue;
 		}else if (!cols && !l && c == '-') {
 			continue;
-		}else if (c == ',' || c == '\n') {
+		}else if (c == delimiter || c == '\n') {
 			if (se) {
 				b = 0;
 				se = 0;
