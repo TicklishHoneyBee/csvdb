@@ -466,13 +466,13 @@ int table_write(table_t *t, char* of, nvp_t *opts)
 				fputc(sep,f);
 			if (strchr(v->value,sep) || strchr(v->value,'\n') || strchr(v->value,' ') || strchr(v->value,enc)) {
 				p = v->value;
-				fputs(escenc,f);
+				fputc(enc,f);
 				while ((q = strchr(p,enc))) {
 					*q = 0;
 					fputs(p,f);
-					fputc(esc,f);
+					fputs(escenc,f);
 					*q = enc;
-					p = q;
+					p = q+1;
 				}
 				fputs(p,f);
 				fputc(enc,f);

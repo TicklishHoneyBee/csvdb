@@ -478,6 +478,7 @@ void sql_select(result_t *r)
 	nvp_t *l = NULL;
 	nvp_t *t;
 	nvp_t *u;
+	nvp_t *output_opts = NULL;
 	nvp_t *of = NULL;
 	nvp_t *n = r->keywords;
 	nvp_t *q = nvp_search(r->keywords,"FROM");
@@ -948,6 +949,56 @@ void sql_select(result_t *r)
 			}else if (!strcasecmp(n->value,"INTO") && n->next && n->next->next && !strcasecmp(n->next->value,"OUTFILE")) {
 				n = n->next->next;
 				of = n;
+				l = n->next;
+				if (l && !strcasecmp(l->value,"FIELDS")) {
+					l = l->next;
+					if (
+						!l || strcasecmp(l->value,"TERMINATED")
+						|| !l->next || strcasecmp(l->next->value,"BY")
+						|| !l->next->next
+					) {
+						error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
+						return;
+					}
+					l = l->next->next;
+					if (strcasecmp(l->value,"DEFAULT")) {
+						output_opts = nvp_create("sep",l->value);
+					}
+					l = l->next;
+					if (l && l->next && l->next->next) {
+						if (!strcasecmp(l->value,"OPTIONALLY")) {
+							l = l->next;
+							if (!l->next->next) {
+								error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
+								return;
+							}
+						}
+						if (
+							!strcasecmp(l->value,"ENCLOSED")
+							&& !strcasecmp(l->next->value,"BY")
+						) {
+							l = l->next->next;
+							if (strcasecmp(l->value,"DEFAULT")) {
+								nvp_add(&output_opts,"enc",l->value);
+							}
+							l = l->next;
+						}
+						if (l && l->next && l->next->next) {
+							if (
+								!strcasecmp(l->value,"ESCAPED")
+								&& !strcasecmp(l->next->value,"BY")
+							) {
+								l = l->next->next;
+								if (strcasecmp(l->value,"DEFAULT")) {
+									nvp_add(&output_opts,"esc",l->value);
+								}
+								l = l->next;
+							}
+						}
+					}
+				}
+				n = l;
+				continue;
 			}else if (strcasecmp(n->value,"FROM") && strcasecmp(n->prev->value,"FROM")) {
 				error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",n->value,r->q);
 				return;
@@ -982,7 +1033,7 @@ void sql_select(result_t *r)
 			error(r,CSVDB_ERROR_FILEEXISTS,"file '%s' already exists\n",of->value);
 		}else{
 			t = result_to_table(r,of->value);
-			table_write(t,of->value,NULL);
+			table_write(t,of->value,output_opts);
 		}
 		row_free_all(r->result);
 		r->result = NULL;
