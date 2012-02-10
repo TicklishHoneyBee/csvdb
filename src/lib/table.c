@@ -18,6 +18,16 @@
 
 #include "csvdb.h"
 
+static struct table_settings_s {
+	char sep;
+	char enc;
+	char esc;
+} table_settings = {
+	',',
+	'"',
+	'\\'
+};
+
 table_t *tables = NULL;
 
 table_t *table_add()
@@ -203,14 +213,16 @@ column_end:
 	return t;
 }
 
-table_t *table_load_csv(char* file, nvp_t *cols)
+table_t *table_load_csv(char* file, nvp_t *cols, nvp_t *opts)
 {
 	static char *envi = (char*)-1;
-	static char delimiter = ',';
 	FILE *f;
 	char c = ' ';
 	char fbuff[2048];
 	char buff[1024];
+	char sep = table_settings.sep;
+	char enc = table_settings.enc;
+	char esc = table_settings.esc;
 	int key;
 	int b;
 	int l;
@@ -234,8 +246,24 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 	if (!f)
 		return NULL;
 
-	if (envi == (char*)-1 && (envi = getenv("DBDELIMITER")) != NULL)
-		delimiter = envi[0];
+	if (envi == (char*)-1 && (envi = getenv("DBDELIMITER")) != NULL) {
+		table_settings.sep = envi[0];
+		sep = envi[0];
+	}
+
+	if (opts) {
+		n = opts;
+		while (n) {
+			if (!strcmp(n->name,"sep")) {
+				sep = n->value[0];
+			}else if (!strcmp(n->name,"enc")) {
+				enc = n->value[0];
+			}else if (!strcmp(n->name,"esc")) {
+				esc = n->value[0];
+			}
+			n = n->next;
+		}
+	}
 
 	t = table_add();
 	t->name = nvp_create(NULL,file);
@@ -268,8 +296,8 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 			goto column_end;
 		c = fbuff[fp++];
 		if (s) {
-			if (c == '"') {
-				if (b && buff[b-1] == '\\') {
+			if (c == enc) {
+				if (b && buff[b-1] == esc) {
 					b--;
 				}else{
 					s = 0;
@@ -281,14 +309,14 @@ table_t *table_load_csv(char* file, nvp_t *cols)
 				if (!b || buff[b-1] != '\r')
 					buff[b++] = '\r';
 			}
-		}else if (!b && c == '"') {
+		}else if (!b && c == enc) {
 			s = 1;
 			continue;
 		}else if ((!b || (!cols && !l)) && isspace(c) && c != '\n') {
 			continue;
 		}else if (!cols && !l && c == '-') {
 			continue;
-		}else if (c == delimiter || c == '\n') {
+		}else if (c == sep || c == '\n') {
 			if (se) {
 				b = 0;
 				se = 0;
@@ -381,13 +409,17 @@ void table_free(char* name)
 	free(t);
 }
 
-int table_write(table_t *t, char* of)
+int table_write(table_t *t, char* of, nvp_t *opts)
 {
 	FILE *f;
 	row_t *r;
 	nvp_t *v;
 	char* q;
 	char* p;
+	char sep = table_settings.sep;
+	char enc = table_settings.enc;
+	char esc = table_settings.esc;
+	char escenc[3];
 	if (!t)
 		return -1;
 	if (!of)
@@ -401,10 +433,26 @@ int table_write(table_t *t, char* of)
 	if (!f)
 		return -2;
 
+	if (opts) {
+		v = opts;
+		while (v) {
+			if (!strcmp(v->name,"sep")) {
+				sep = v->value[0];
+			}else if (!strcmp(v->name,"enc")) {
+				enc = v->value[0];
+			}else if (!strcmp(v->name,"esc")) {
+				esc = v->value[0];
+			}
+			v = v->next;
+		}
+	}
+
+	sprintf(escenc,"%c%c",esc,enc);
+
 	v = t->columns;
 	while (v) {
 		if (v->prev)
-			fputs(",",f);
+			fputc(sep,f);
 		fputs(v->value,f);
 		v = v->next;
 	}
@@ -415,19 +463,19 @@ int table_write(table_t *t, char* of)
 		v = r->data;
 		while (v) {
 			if (v->prev)
-				fputs(",",f);
-			if (strchr(v->value,',') || strchr(v->value,'\n') || strchr(v->value,' ') || strchr(v->value,'"')) {
+				fputc(sep,f);
+			if (strchr(v->value,sep) || strchr(v->value,'\n') || strchr(v->value,' ') || strchr(v->value,enc)) {
 				p = v->value;
-				fputs("\"",f);
-				while ((q = strchr(p,'"'))) {
+				fputs(escenc,f);
+				while ((q = strchr(p,enc))) {
 					*q = 0;
 					fputs(p,f);
-					fputs("\\",f);
-					*q = '"';
+					fputc(esc,f);
+					*q = enc;
 					p = q;
 				}
 				fputs(p,f);
-				fputs("\"",f);
+				fputc(enc,f);
 			}else{
 				fputs(v->value,f);
 			}
@@ -490,7 +538,7 @@ table_ref_t *table_resolve(char* str, result_t *r)
 			if (!strcasecmp(tbl,"FILE")) {
 				tab = tables;
 			}else{
-				tab = table_load_csv(tbl,NULL);
+				tab = table_load_csv(tbl,NULL,NULL);
 			}
 		}
 

@@ -829,7 +829,7 @@ void result_limit(result_t *r)
 	}
 }
 
-void result_free(result_t *r)
+void csvdb_free_result(result_t *r)
 {
 	result_t *s;
 	nvp_t *w;
@@ -865,11 +865,13 @@ void result_free(result_t *r)
 
 	while ((s = r->sub)) {
 		r->sub = s->next;
-		result_free(s);
+		csvdb_free_result(s);
 	}
 
 	free(r);
 }
+
+void result_free(result_t *r) __attribute__ ((weak, alias ("csvdb_free_result")));
 
 table_t *result_to_table(result_t *r, char* name)
 {

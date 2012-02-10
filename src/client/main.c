@@ -199,8 +199,8 @@ static void interact_rdln(void)
 	csvdb_init_readline();
 
 	/* print some banners, then go interactive */
-	write(STDOUT_FILENO, banner, sizeof(banner) - 1);
-	write(STDOUT_FILENO, discl, sizeof(discl) - 1);
+	(void)write(STDOUT_FILENO, banner, sizeof(banner) - 1);
+	(void)write(STDOUT_FILENO, discl, sizeof(discl) - 1);
 
 	while ((line = csvdb_readline(d))) {
 		/* check for special commands */
@@ -217,7 +217,7 @@ static void interact_rdln(void)
 
 			r = csvdb_query(line);
 			csvdb_print_result(r);
-			result_free(r);
+			csvdb_free_result(r);
 		}
 		free(line);
 	}
@@ -291,7 +291,7 @@ int main(int argc, char** argv)
 	}
 	l = f;
 	while (l) {
-		tbl = table_load_csv(l->value,l->child);
+		tbl = table_load_csv(l->value,l->child,NULL);
 		if (l->name) {
 			nvp_add(&tbl->name,NULL,l->name);
 		}
@@ -310,7 +310,7 @@ int main(int argc, char** argv)
 		while (l) {
 			r = csvdb_query(l->value);
 			csvdb_print_result(r);
-			result_free(r);
+			csvdb_free_result(r);
 			l =l->next;
 		}
 	}else {

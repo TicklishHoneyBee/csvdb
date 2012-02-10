@@ -685,7 +685,7 @@ void sql_select(result_t *r)
 							}else if (sub->error) {
 								r->error = sub->error;
 								sub->error = NULL;
-								result_free(sub);
+								csvdb_free_result(sub);
 								free(c);
 								return;
 							}
@@ -732,7 +732,7 @@ void sql_select(result_t *r)
 									}else if (sub->error) {
 										r->error = sub->error;
 										sub->error = NULL;
-										result_free(sub);
+										csvdb_free_result(sub);
 										free(c);
 										return;
 									}
@@ -982,14 +982,14 @@ void sql_select(result_t *r)
 			error(r,CSVDB_ERROR_FILEEXISTS,"file '%s' already exists\n",of->value);
 		}else{
 			t = result_to_table(r,of->value);
-			table_write(t,of->value);
+			table_write(t,of->value,NULL);
 		}
 		row_free_all(r->result);
 		r->result = NULL;
 	}
 }
 
-/* LOAD DATA INFILE file */
+/* LOAD DATA INFILE file [FIELDS [TERMINATED BY 'char'] [[OPTIONALLY] ENCLOSED BY 'char'] [ESCAPED BY 'char']] */
 void sql_load(result_t *r)
 {
 	int i;
@@ -998,6 +998,7 @@ void sql_load(result_t *r)
 	int un = 0;
 	char buff[128];
 	table_t *t;
+	nvp_t *o = NULL;
 	nvp_t *f;
 	nvp_t *l;
 	nvp_t *u;
@@ -1034,7 +1035,7 @@ void sql_load(result_t *r)
 		l = l->next;
 		f = l;
 		l = l->next;
-		t = table_load_csv(f->value,NULL);
+		t = table_load_csv(f->value,NULL,NULL);
 		if (!t) {
 			error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",f->value);
 			return;
@@ -1114,6 +1115,54 @@ void sql_load(result_t *r)
 		l = u;
 	}
 
+	if (l && !strcasecmp(l->value,"FIELDS")) {
+		l = l->next;
+		if (
+			!l || strcasecmp(l->value,"TERMINATED")
+			|| !l->next || strcasecmp(l->next->value,"BY")
+			|| !l->next->next
+		) {
+			error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
+			return;
+		}
+		l = l->next->next;
+		if (strcasecmp(l->value,"DEFAULT")) {
+			o = nvp_create("sep",l->value);
+		}
+		l = l->next;
+		if (l && l->next && l->next->next) {
+			if (!strcasecmp(l->value,"OPTIONALLY")) {
+				l = l->next;
+				if (!l->next->next) {
+					error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s': \"%s\"\n",l->value,r->q);
+					return;
+				}
+			}
+			if (
+				!strcasecmp(l->value,"ENCLOSED")
+				&& !strcasecmp(l->next->value,"BY")
+			) {
+				l = l->next->next;
+				if (strcasecmp(l->value,"DEFAULT")) {
+					nvp_add(&o,"enc",l->value);
+				}
+				l = l->next;
+			}
+			if (l && l->next && l->next->next) {
+				if (
+					!strcasecmp(l->value,"ESCAPED")
+					&& !strcasecmp(l->next->value,"BY")
+				) {
+					l = l->next->next;
+					if (strcasecmp(l->value,"DEFAULT")) {
+						nvp_add(&o,"esc",l->value);
+					}
+					l = l->next;
+				}
+			}
+		}
+	}
+
 	if (un && ocols && !of) {
 		nvp_free_all(cols);
 		cols = ocols;
@@ -1123,7 +1172,7 @@ void sql_load(result_t *r)
 	if (ap) {
 		t = table_load_apache(f->value);
 	}else{
-		t = table_load_csv(f->value,cols);
+		t = table_load_csv(f->value,cols,o);
 	}
 	if (!t) {
 		error(r,CSVDB_ERROR_TABLEREF,"invalid table or file referred to in '%s'\n",f->value);
@@ -1136,9 +1185,11 @@ void sql_load(result_t *r)
 	nvp_free_all(cols);
 
 	if (of) {
-		i = table_write(t,of->value);
+		i = table_write(t,of->value,o);
+		if (i)
+			error(r,CSVDB_ERROR_INTERNAL,"internal error %d",i);
 		if (strcmp(of->value,"-")) {
-			table_load_csv(of->value,NULL);
+			table_load_csv(of->value,NULL,o);
 		}
 	}
 }
@@ -1342,7 +1393,7 @@ void sql_create(result_t *r)
 		l = l->next;
 	}
 	if (csvdb_settings&CSVDB_SET_PERMANENT) {
-		table_write(r->table->t,NULL);
+		table_write(r->table->t,NULL,NULL);
 	}
 }
 
@@ -1473,7 +1524,7 @@ end_rows:
 	row_free_all(r->result);
 	r->result = NULL;
 	if (csvdb_settings&CSVDB_SET_PERMANENT) {
-		table_write(r->table->t,NULL);
+		table_write(r->table->t,NULL,NULL);
 	}
 }
 
@@ -1799,7 +1850,7 @@ end_update:
 	row_free_keys(r->result);
 	r->result = NULL;
 	if (csvdb_settings&CSVDB_SET_PERMANENT) {
-		table_write(r->table->t,NULL);
+		table_write(r->table->t,NULL,NULL);
 	}
 }
 
@@ -2047,7 +2098,7 @@ end_delete:
 	row_free_keys(r->result);
 	r->result = NULL;
 	if (csvdb_settings&CSVDB_SET_PERMANENT) {
-		table_write(r->table->t,NULL);
+		table_write(r->table->t,NULL,NULL);
 	}
 }
 
@@ -2330,7 +2381,7 @@ ins_last_col:
 			i = strlen(n->value);
 			if (!strcmp(n->value+(i-4),".csv")) {
 				nvp_set(r->table->t->name,NULL,n->value);
-				if (table_write(r->table->t,NULL)) {
+				if (table_write(r->table->t,NULL,NULL)) {
 					error(r,CSVDB_ERROR_FILEREF,"unable to save table to file '%s'\n",n->value);
 					return;
 				}

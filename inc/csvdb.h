@@ -111,12 +111,12 @@ extern unsigned int csvdb_settings;
 /* defined in table.c */
 extern table_t *tables;
 table_t *table_add(void);
-table_t *table_load_csv(char* file, nvp_t *cols);
+table_t *table_load_csv(char* file, nvp_t *cols, nvp_t *opts);
 table_t *table_load_apache(char* file);
 int table_next_key(table_t *t);
 table_t *table_find(char* name);
 void table_free(char* name);
-int table_write(table_t *t, char* of);
+int table_write(table_t *t, char* of, nvp_t *opts);
 table_ref_t *table_resolve(char* str, result_t *r);
 void table_free_refs(table_ref_t *t);
 
@@ -158,7 +158,8 @@ void result_order(result_t *r);
 void result_cols(result_t *r);
 void result_count(result_t *r);
 void result_limit(result_t *r);
-void result_free(result_t *r);
+void csvdb_free_result(result_t *r);
+void result_free(result_t *r) __attribute__ ((deprecated ("use csvdb_free_result")));
 table_t *result_to_table(result_t *r, char* name);
 
 /* defined in row.c */
