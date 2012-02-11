@@ -86,6 +86,12 @@ static char* sub_keywords[] = {
 	"INFILE",
 	"OUTFILE",
 	"FILE",
+	"FIELDS TERMINATED BY",
+	"TERMINATED BY",
+	"BY",
+	"OPTIONALLY",
+	"ENCLOSED BY",
+	"ESCAPED BY",
 	NULL
 };
 

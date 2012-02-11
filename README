@@ -3,19 +3,21 @@
 ========================================================================
 
 ABOUT:
-csvdb is an SQL engine for csv (comma separated values) files, allowing
+csvdb is an SQL engine for csv (character separated values) files, allowing
  files to be searched as if they were database tables
 
 DEPENDENCIES:
-csvdb requires the standard C and POSIX libraries. It has been tested
- with glibc and may work with other C libraries, but this has not been
- tested.
+csvdb requires the standard C and POSIX libraries, and optionally the readline
+ library. It has been tested with glibc and may work with other C libraries,
+ but this has not been tested.
 
 INSTALL:
 If you're reading this then you've already unpacked the tarball,
-so it's the usual 5 steps:
+so it's the usual steps:
 1) cd /path/to/csvdb
-2) ./configure --with-readline
+1a) if downloading the development source from git, run `autoreconf -i' to
+ generate a configure file
+2) ./configure
 3) make
 4) su -
 5) make install
