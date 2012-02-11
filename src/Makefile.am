@@ -35,11 +35,9 @@ libcsvdb_la_SOURCES += lib/row.c
 libcsvdb_la_SOURCES += lib/column.c
 libcsvdb_la_CPPFLAGS += -I$(topinc)
 
-
-## we don't install headers by default now, so just list them here
-EXTRA_csvdb_SOURCES =
-EXTRA_csvdb_SOURCES += $(topinc)/csvdb.h
-EXTRA_csvdb_SOURCES += $(topinc)/csvdb-client.h
-
 ## headers for library
 include_HEADERS = $(topinc)/csvdb.h
+
+## we don't install client headers, so just list them here
+EXTRA_csvdb_SOURCES =
+EXTRA_csvdb_SOURCES += $(topinc)/csvdb-client.h

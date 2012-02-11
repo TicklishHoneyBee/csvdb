@@ -17,6 +17,17 @@
 ************************************************************************/
 
 #include "csvdb.h"
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
+#if defined USE_GETTEXT
+/* gnu gettext */
+# include <locale.h>
+# include "gettext.h"
+#define _(string) gettext(string)
+#else
+#define _(__s) __s
+#endif	/* USE_GETTEXT */
 
 unsigned int csvdb_settings = CSVDB_SET_VOID;
 static char* keywords[] = {
@@ -34,6 +45,16 @@ static char* keywords[] = {
 	"INTO",
 	NULL
 };
+
+int csvdb_init()
+{
+#if defined USE_GETTEXT
+	setlocale(LC_ALL, "");
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	textdomain(PACKAGE);
+#endif	/* USE_GETTEXT */
+	return 0;
+}
 
 int is_keyword(char* w)
 {
@@ -105,7 +126,6 @@ int csvdb_print_result(result_t *res)
 	char buff[1024];
 	float tm;
 	char* v;
-	char* s = "";
 	int rc;
 	if (!res) {
 		printf("invalid result set\n");
@@ -114,31 +134,62 @@ int csvdb_print_result(result_t *res)
 	tm = (float)res->time/1000.0;
 	r = res->result;
 	rc = row_count(r);
-	if (rc != 1)
-		s = "s";
 
 	if (res->error) {
 		t = res->error;
 		while (t) {
-			printf("%s: %s\n",s_csvdb_errors[t->num],t->value);
+			/* TODO: gettext? */
+			switch (t->num) {
+			case CSVDB_ERROR_NONE:
+				break;
+			case CSVDB_ERROR_INTERNAL:
+				printf(_("An internal error occured\n"));
+				break;
+			case CSVDB_ERROR_SYNTAX:
+				printf(_("Syntax Error near '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_TABLEREF:
+				printf(_("Invalid Table Reference '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_COLUMNREF:
+				printf(_("Invalid Column Reference '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_FILEREF:
+				printf(_("Invalid File Reference '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_FILEEXISTS:
+				printf(_("File '%s' can not be written as it already exists\n"),t->value);
+				break;
+			case CSVDB_ERROR_UNSUPPORTED:
+				printf(_("Unsupported SQL '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_OUTOFRANGE:
+				printf(_("Reference is Out Of Range '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_BADRESULT:
+				printf(_("Bad Result Set '%s'\n"),t->value);
+				break;
+			case CSVDB_ERROR_SUBQUERY:
+				printf(_("Error in SubQuery: %s\n"),t->value);
+				break;
+			default:
+				printf(_("Unknown error (%d): %s\n"),t->num,t->value);
+			}
 			t = t->next;
 		}
 	}
 
 	if (!rc) {
 		if (res->ar) {
-			s = "";
-			if (res->ar != 1)
-				s = "s";
-			printf("-----\n%d row%s affected in %.3f seconds\n\n",res->ar,s,tm);
+			printf(_("-----\n%d rows affected in %.3f seconds\n\n"),res->ar,tm);
 			return res->ar;
 		}
-		printf("0 row%s returned\n",s);
+		printf(_("0 rows returned\n"));
 		return 0;
 	}
 
 	if (!res->error) {
-		printf("formatting results...\n");
+		printf(_("formatting results...\n"));
 		col = res->cols;
 		while (col) {
 			if (col->alias[0]) {
@@ -233,7 +284,7 @@ int csvdb_print_result(result_t *res)
 		puts(v);
 	}
 
-	printf("%d row%s returned in %.3f seconds\n\n",rc,s,tm);
+	printf(_("%d rows returned in %.3f seconds\n\n"),rc,tm);
 
 	return rc;
 }

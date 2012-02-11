@@ -1,11 +1,11 @@
-ACLOCAL_AMFLAGS =
+ACLOCAL_AMFLAGS = -I m4 
 
-SUBDIRS = src
+SUBDIRS = po src
 
 man1_MANS =
 man1_MANS += man/csvdb.1
 
-EXTRA_DIST =
+EXTRA_DIST = config.rpath m4/ChangeLog 
 EXTRA_DIST += $(man1_MANS)
 EXTRA_DIST += doc/csvdb-doc.html
 EXTRA_DIST += doc/queries

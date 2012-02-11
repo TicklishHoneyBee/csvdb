@@ -8,8 +8,8 @@ csvdb is an SQL engine for csv (character separated values) files, allowing
 
 DEPENDENCIES:
 csvdb requires the standard C and POSIX libraries, and optionally the readline
- library. It has been tested with glibc and may work with other C libraries,
- but this has not been tested.
+ and gettext libraries. It has been tested with glibc and may work with other
+ C libraries, but this has not been tested.
 
 INSTALL:
 If you're reading this then you've already unpacked the tarball,

@@ -23,8 +23,8 @@ dnl actually this is GNU so foreign isn't needed but automake begs to differ
 AM_INIT_AUTOMAKE([foreign])
 
 AC_PROG_CC
-AC_PROG_RANLIB
 AC_PROG_LIBTOOL
+AC_CONFIG_MACRO_DIR([m4])
 
 CFLAGS="${CFLAGS} -Wall -ansi -pedantic -D_GNU_SOURCE"
 
@@ -32,6 +32,10 @@ AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [
 enable support for readline
 ])], [with_readline="${withval}"], [with_readline="yes"])
+AC_ARG_WITH([gettext], [dnl
+AS_HELP_STRING([--with-gettext], [
+enable support for gettext
+])], [with_gettext="${withval}"], [with_gettext="yes"])
 
 READLINE_LIBS=
 AS_IF([test "x${with_readline}" != "xno"], [dnl
@@ -44,11 +48,15 @@ AS_IF([test "x${with_readline}" != "xno"], [dnl
 		with_readline="no"
 	], [])])
 AM_CONDITIONAL([USE_READLINE], [test "${with_readline}" != "no"])
+AM_CONDITIONAL([USE_GETTEXT], [test "${with_gettext}" != "no"])
 
 AC_CHECK_FUNCS([strcasestr])
 
+AS_IF([test "x${with_gettext}" != "xno"], [dnl
+	AM_GNU_GETTEXT([external])
+])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile po/Makefile.in])
 AC_CONFIG_FILES([src/Makefile])
 AC_OUTPUT
 
@@ -58,6 +66,7 @@ cat <<EOF
 Build summary
 =============
 Readline support:	${with_readline}
+Gettext support:	${with_gettext}
 
 EOF
 

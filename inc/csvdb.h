@@ -143,6 +143,7 @@ nvp_t *nvp_search_higher_string(nvp_t *stack, int i, char* value);
 result_t *csvdb_query(char* q);
 
 /* defined in lib.c */
+int csvdb_init(void);
 int is_keyword(char* w);
 int is_numeric(char* w);
 int remove_wildcard(char* buff, char* str);
