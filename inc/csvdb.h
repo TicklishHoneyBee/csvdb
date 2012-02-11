@@ -147,7 +147,7 @@ int is_keyword(char* w);
 int is_numeric(char* w);
 int remove_wildcard(char* buff, char* str);
 int csvdb_print_result(result_t *res);
-void error(result_t *r, int err, char* str, ...);
+void error(result_t *r, int err, char* ref);
 
 /* defined in result.c */
 void result_where(result_t *r);

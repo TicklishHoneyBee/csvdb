@@ -110,7 +110,7 @@ column_ref_t *column_resolve(char* str, result_t *r)
 	int l;
 	column_ref_t *ret = NULL;
 	if (!str || !r) {
-		error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference in query \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_COLUMNREF,str);
 		return NULL;
 	}
 
@@ -127,7 +127,7 @@ column_ref_t *column_resolve(char* str, result_t *r)
 	}
 
 	if (!col || !col[0]) {
-		error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference '%s' \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_COLUMNREF,str);
 		return NULL;
 	}
 
@@ -145,7 +145,7 @@ column_ref_t *column_resolve(char* str, result_t *r)
 			t = t->next;
 		}
 		if (!t) {
-			error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+			error(r,CSVDB_ERROR_TABLEREF,str);
 			return NULL;
 		}
 	}
@@ -175,26 +175,18 @@ column_ref_t *column_resolve(char* str, result_t *r)
 				if (t) {
 					n = nvp_grabi(t->t->columns,l);
 					if (!n) {
-						error(
-							r,
-							CSVDB_ERROR_OUTOFRANGE,
-							"'COLUMN(%d)' is out of range in %s\r\n",
-							l,
-							t->t->name->value
-						);
+						char bf[50];
+						sprintf(bf,"COLUMN(%d)",l);
+						error(r,CSVDB_ERROR_OUTOFRANGE,bf);
 						return NULL;
 					}
 					return column_resolve(n->value,r);
 				}else if (!r->table->next) {
 					n = nvp_grabi(r->table->t->columns,l);
 					if (!n) {
-						error(
-							r,
-							CSVDB_ERROR_OUTOFRANGE,
-							"'COLUMN(%d)' is out of range in %s\r\n",
-							l,
-							r->table->t->name->value
-						);
+						char bf[50];
+						sprintf(bf,"COLUMN(%d)",l);
+						error(r,CSVDB_ERROR_OUTOFRANGE,bf);
 						return NULL;
 					}
 					return column_resolve(n->value,r);
@@ -266,7 +258,7 @@ column_ref_t *column_resolve(char* str, result_t *r)
 		}
 	}
 
-	error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference '%s' \"%s\"\n",str,r->q);
+	error(r,CSVDB_ERROR_COLUMNREF,str);
 
 	return NULL;
 }
@@ -288,7 +280,7 @@ column_ref_t *column_find(char* str, result_t *r)
 	column_ref_t *ret = NULL;
 	column_ref_t *cl;
 	if (!str || !r) {
-		error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference in query \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_COLUMNREF,str);
 		return NULL;
 	}
 
@@ -305,7 +297,7 @@ column_ref_t *column_find(char* str, result_t *r)
 	}
 
 	if (!col || !col[0]) {
-		error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference '%s' \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_COLUMNREF,str);
 		return NULL;
 	}
 
@@ -324,7 +316,7 @@ column_ref_t *column_find(char* str, result_t *r)
 			}
 		}
 		if (!t) {
-			error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+			error(r,CSVDB_ERROR_TABLEREF,str);
 			return NULL;
 		}
 	}
@@ -396,26 +388,18 @@ column_ref_t *column_find(char* str, result_t *r)
 						if (t) {
 							n = nvp_grabi(t->t->columns,l);
 							if (!n) {
-								error(
-									r,
-									CSVDB_ERROR_OUTOFRANGE,
-									"'COLUMN(%d)' is out of range in %s\r\n",
-									l,
-									t->t->name->value
-								);
+								char bf[50];
+								sprintf(bf,"COLUMN(%d)",l);
+								error(r,CSVDB_ERROR_OUTOFRANGE,bf);
 								return NULL;
 							}
 							return column_find(n->value,r);
 						}else if (!r->table->next) {
 							n = nvp_grabi(r->table->t->columns,l);
 							if (!n) {
-								error(
-									r,
-									CSVDB_ERROR_OUTOFRANGE,
-									"'COLUMN(%d)' is out of range in %s\r\n",
-									l,
-									r->table->t->name->value
-								);
+								char bf[50];
+								sprintf(bf,"COLUMN(%d)",l);
+								error(r,CSVDB_ERROR_OUTOFRANGE,bf);
 								return NULL;
 							}
 							return column_find(n->value,r);
@@ -435,7 +419,7 @@ column_ref_t *column_find(char* str, result_t *r)
 		}
 	}
 
-	error(r,CSVDB_ERROR_COLUMNREF,"invalid column reference '%s' \"%s\"\n",str,r->q);
+	error(r,CSVDB_ERROR_COLUMNREF,str);
 
 	return NULL;
 }

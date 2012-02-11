@@ -30,8 +30,8 @@ CFLAGS="${CFLAGS} -Wall -ansi -pedantic -D_GNU_SOURCE"
 
 AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [
-enable experimental support for readline
-])], [with_readline="${withval}"], [with_readline="no"])
+enable support for readline
+])], [with_readline="${withval}"], [with_readline="yes"])
 
 READLINE_LIBS=
 AS_IF([test "x${with_readline}" != "xno"], [dnl

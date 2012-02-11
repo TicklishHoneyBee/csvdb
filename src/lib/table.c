@@ -499,7 +499,7 @@ table_ref_t *table_resolve(char* str, result_t *r)
 	table_ref_t *t = NULL;
 	int l;
 	if (!str || !r) {
-		error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_TABLEREF,str);
 		return NULL;
 	}
 
@@ -510,7 +510,7 @@ table_ref_t *table_resolve(char* str, result_t *r)
 	tbl = rdup;
 
 	if (!tbl || !tbl[0]) {
-		error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);
+		error(r,CSVDB_ERROR_TABLEREF,str);
 		return NULL;
 	}
 
@@ -551,7 +551,7 @@ table_ref_t *table_resolve(char* str, result_t *r)
 		}
 	}
 
-	error(r,CSVDB_ERROR_TABLEREF,"invalid table reference '%s' \"%s\"\n",str,r->q);;
+	error(r,CSVDB_ERROR_TABLEREF,str);;
 
 	return NULL;
 }

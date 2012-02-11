@@ -216,7 +216,7 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 	case CMP_IN:
 		sub = (result_t*)q->value;
 		if (!sub->cols || sub->cols->next) {
-			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
+			error(r,CSVDB_ERROR_SUBQUERY,sub->q);
 			return 0;
 		}
 		rw = sub->result;
@@ -278,7 +278,7 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 	case CMP_NOTIN:
 		sub = (result_t*)q->value;
 		if (!sub->cols || sub->cols->next) {
-			error(r,CSVDB_ERROR_SUBQUERY,"Invalid result set from subquery \"%s\"\n",sub->q);
+			error(r,CSVDB_ERROR_SUBQUERY,sub->q);
 			return 0;
 		}
 		rw = sub->result;
@@ -289,7 +289,7 @@ static int where_compare(result_t *r, row_t *row, nvp_t *q, nvp_t *l)
 		}
 		break;
 	default:
-		error(r,CSVDB_ERROR_SYNTAX,"syntax error near '%s' in WHERE clause \"%s\"\n",q->name,r->q);
+		error(r,CSVDB_ERROR_SYNTAX,q->name);
 		row_free_keys(r->result);
 		return 0;
 	}

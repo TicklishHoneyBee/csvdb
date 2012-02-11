@@ -78,6 +78,20 @@ int remove_wildcard(char* buff, char* str)
 	return o;
 }
 
+static char* s_csvdb_errors[] = {
+	"CSVDB_ERROR_NONE",
+	"CSVDB_ERROR_INTERNAL",
+	"CSVDB_ERROR_SYNTAX",
+	"CSVDB_ERROR_TABLEREF",
+	"CSVDB_ERROR_COLUMNREF",
+	"CSVDB_ERROR_FILEREF",
+	"CSVDB_ERROR_FILEEXISTS",
+	"CSVDB_ERROR_UNSUPPORTED",
+	"CSVDB_ERROR_OUTOFRANGE",
+	"CSVDB_ERROR_BADRESULT",
+	"CSVDB_ERROR_SUBQUERY"
+};
+
 int csvdb_print_result(result_t *res)
 {
 	row_t *row;
@@ -106,7 +120,7 @@ int csvdb_print_result(result_t *res)
 	if (res->error) {
 		t = res->error;
 		while (t) {
-			printf("%d: %s",t->num,t->value);
+			printf("%s: %s\n",s_csvdb_errors[t->num],t->value);
 			t = t->next;
 		}
 	}
@@ -224,21 +238,15 @@ int csvdb_print_result(result_t *res)
 	return rc;
 }
 
-void error(result_t *r, int err, char* str, ...)
+void error(result_t *r, int err, char* ref)
 {
-	va_list ap;
-	char buff[1024];
 	nvp_t *n;
 	if (!r)
 		return;
 
-	va_start(ap, str);
-	vsnprintf(buff, 1024, str, ap);
-	va_end(ap);
-
 	if (csvdb_settings&CSVDB_SET_DEBUG)
-		puts(buff);
+		printf("DEBUG: %s error near '%s'",s_csvdb_errors[err],ref);
 
-	n = nvp_add(&r->error,NULL,buff);
+	n = nvp_add(&r->error,NULL,ref);
 	n->num = err;
 }
