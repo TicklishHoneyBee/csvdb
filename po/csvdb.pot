@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: csvdb 0.4\n"
 "Report-Msgid-Bugs-To: http://sandbox.ltmnet.com/csvdb\n"
-"POT-Creation-Date: 2012-02-11 20:45+1000\n"
+"POT-Creation-Date: 2012-02-14 20:00+1000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,62 +17,67 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/lib/lib.c:146
+#: src/lib/lib.c:131
+#, c-format
+msgid "invalid result set\n"
+msgstr ""
+
+#: src/lib/lib.c:145
 #, c-format
 msgid "An internal error occured\n"
 msgstr ""
 
-#: src/lib/lib.c:149
+#: src/lib/lib.c:148
 #, c-format
 msgid "Syntax Error near '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:152
+#: src/lib/lib.c:151
 #, c-format
 msgid "Invalid Table Reference '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:155
+#: src/lib/lib.c:154
 #, c-format
 msgid "Invalid Column Reference '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:158
+#: src/lib/lib.c:157
 #, c-format
 msgid "Invalid File Reference '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:161
+#: src/lib/lib.c:160
 #, c-format
 msgid "File '%s' can not be written as it already exists\n"
 msgstr ""
 
-#: src/lib/lib.c:164
+#: src/lib/lib.c:163
 #, c-format
 msgid "Unsupported SQL '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:167
+#: src/lib/lib.c:166
 #, c-format
 msgid "Reference is Out Of Range '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:170
+#: src/lib/lib.c:169
 #, c-format
 msgid "Bad Result Set '%s'\n"
 msgstr ""
 
-#: src/lib/lib.c:173
+#: src/lib/lib.c:172
 #, c-format
 msgid "Error in SubQuery: %s\n"
 msgstr ""
 
-#: src/lib/lib.c:176
+#: src/lib/lib.c:175
 #, c-format
 msgid "Unknown error (%d): %s\n"
 msgstr ""
 
-#: src/lib/lib.c:184
+#: src/lib/lib.c:183
 #, c-format
 msgid ""
 "-----\n"
@@ -80,17 +85,17 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/lib/lib.c:187
+#: src/lib/lib.c:186
 #, c-format
 msgid "0 rows returned\n"
 msgstr ""
 
-#: src/lib/lib.c:192
+#: src/lib/lib.c:191
 #, c-format
 msgid "formatting results...\n"
 msgstr ""
 
-#: src/lib/lib.c:287
+#: src/lib/lib.c:286
 #, c-format
 msgid ""
 "%d rows returned in %.3f seconds\n"

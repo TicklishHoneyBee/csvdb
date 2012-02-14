@@ -128,7 +128,7 @@ int csvdb_print_result(result_t *res)
 	char* v;
 	int rc;
 	if (!res) {
-		printf("invalid result set\n");
+		printf(_("invalid result set\n"));
 		return -1;
 	}
 	tm = (float)res->time/1000.0;
@@ -138,7 +138,6 @@ int csvdb_print_result(result_t *res)
 	if (res->error) {
 		t = res->error;
 		while (t) {
-			/* TODO: gettext? */
 			switch (t->num) {
 			case CSVDB_ERROR_NONE:
 				break;
