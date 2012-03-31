@@ -236,6 +236,11 @@ SELECT * FROM table LIMIT 0,5;
 LOAD DATA INFILE [WITHOUT NAMES | APACHE] '<span class="key">file_name</span>'
 &nbsp;&nbsp;&nbsp;&nbsp;[AS <span class="key">alias</span>]
 &nbsp;&nbsp;&nbsp;&nbsp;[INTO TABLE '<span class="key">outfile_name</span>']
+&nbsp;&nbsp;&nbsp;&nbsp;[FIELDS
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[TERMINATED BY 'char']
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[[OPTIONALLY] ENCLOSED BY 'char']
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ESCAPED BY 'char']
+&nbsp;&nbsp;&nbsp;&nbsp;]
 </pre>
 <p>The LOAD DATA INFILE statement reads rows from a text file into a table. <span class="key">file_name</span> must be a string containing a path and file name for an existing csv file.</p>
 <pre>
