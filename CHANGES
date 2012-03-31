@@ -43,3 +43,13 @@
 	- added new column/table reference resolvers
 	- implemented column = column comparisons in where
 	- bugfix to result_free with subqueries
+0.5
+	- make install now installs libraries and headers
+	- added a strcasestr implementation for systems that don't have
+	 it in their C library
+	- added support for DBDELIMETER environment variable for setting
+	 default field seperator
+	- add support for different seperators, enclosures, and escapes
+	 when loading files from csvdb shell
+	- switched to using readline as default shell
+	- add gettext support

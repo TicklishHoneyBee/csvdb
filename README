@@ -3,20 +3,20 @@
 ========================================================================
 
 ABOUT:
-csvdb is an SQL engine for csv (character separated values) files, allowing
- files to be searched as if they were database tables
+csvdb is an SQL engine for csv (character separated values) files,
+ allowing files to be searched as if they were database tables
 
 DEPENDENCIES:
-csvdb requires the standard C and POSIX libraries, and optionally the readline
- and gettext libraries. It has been tested with glibc and may work with other
- C libraries, but this has not been tested.
+csvdb requires the standard C and POSIX libraries, and optionally the
+ readline and gettext libraries. It has been tested with glibc and may
+ work with other C libraries.
 
 INSTALL:
 If you're reading this then you've already unpacked the tarball,
 so it's the usual steps:
 1) cd /path/to/csvdb
-1a) if downloading the development source from git, run `autoreconf -i' to
- generate a configure file
+1a) if downloading the development source from git, run `autoreconf -i'
+ to generate a configure file
 2) ./configure
 3) make
 4) su -
@@ -29,8 +29,8 @@ USE:
 csvdb [-f <file>] [-a <file>] [-n <alias>] [-e <query>]
 	If no -e query is given on the command line, the csvdb
 	 interactive shell will open
-	See http://sandbox.ltmnet.com/csvdb-doc.html or `man csvdb'
-	 for details on the sql currently supported by csvdb
+	See http://sandbox.ltmnet.com/csvdb-doc.html or `man csvdb' for
+	 details on the sql currently supported by csvdb
 
 LICENSE:
 csvdb is licensed under the GPLv3, there's a copy of it in LICENSE
