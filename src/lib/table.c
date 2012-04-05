@@ -320,6 +320,8 @@ table_t *table_load_csv(char* file, nvp_t *cols, nvp_t *opts)
 			if (se) {
 				b = 0;
 				se = 0;
+				if (c == '\n')
+					goto row_end;
 				continue;
 			}
 column_end:
@@ -338,7 +340,7 @@ column_end:
 				nvp_add(row,NULL,buff);
 				ccc++;
 			}
-
+row_end:
 			if (c == '\n') {
 				l++;
 				ccc = 0;
