@@ -1,6 +1,6 @@
 /************************************************************************
 * main.c
-* Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>
+* Copyright (C) Lisa Milne 2011-2012 <lisa@ltmnet.com>
 *
 * This program is free software: you can redistribute it and/or modify it
 * under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
 /* interactive handlers */
 static const char banner[] = "\
 csvDB shell\r\n\
-Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>\r\n\
+Copyright (C) Lisa Milne 2011-2012 <lisa@ltmnet.com>\r\n\
 This program is free software: you can redistribute it and/or modify it\r\n\
 under the terms of the GNU General Public License as published by the\r\n\
 Free Software Foundation, either version 3 of the License, or\r\n\

@@ -1,6 +1,6 @@
 /************************************************************************
 * sql.c
-* Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>
+* Copyright (C) Lisa Milne 2011-2012 <lisa@ltmnet.com>
 *
 * This program is free software: you can redistribute it and/or modify it
 * under the terms of the GNU General Public License as published by the
@@ -826,7 +826,7 @@ void sql_select(result_t *r)
 						q = q->next;
 						continue;
 					}
-					col = column_find(n->value,r);
+					col = column_find(q->value,r);
 					if (!col)
 						return;
 					t = nvp_add(&r->order,NULL,col->name);

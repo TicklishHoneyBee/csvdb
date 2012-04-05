@@ -1,6 +1,6 @@
 /************************************************************************
 * result.c
-* Copyright (C) Lisa Milne 2011 <lisa@ltmnet.com>
+* Copyright (C) Lisa Milne 2011-2012 <lisa@ltmnet.com>
 *
 * This program is free software: you can redistribute it and/or modify it
 * under the terms of the GNU General Public License as published by the
@@ -586,6 +586,8 @@ void result_order(result_t *r)
 					}else{
 						l = row_add(&trs,q->key);
 						l->data = q->data;
+						l->t_data = q->t_data;
+						q->t_data = NULL;
 					}
 					q = q->next;
 				}
@@ -617,6 +619,8 @@ void result_order(result_t *r)
 					}else{
 						l = row_add(&trs,q->key);
 						l->data = q->data;
+						l->t_data = q->t_data;
+						q->t_data = NULL;
 					}
 					q = q->next;
 				}
@@ -650,6 +654,8 @@ void result_order(result_t *r)
 					}else{
 						l = row_add(&trs,q->key);
 						l->data = q->data;
+						l->t_data = q->t_data;
+						q->t_data = NULL;
 					}
 					q = q->next;
 				}
@@ -681,6 +687,8 @@ void result_order(result_t *r)
 					}else{
 						l = row_add(&trs,q->key);
 						l->data = q->data;
+						l->t_data = q->t_data;
+						q->t_data = NULL;
 					}
 					q = q->next;
 				}
