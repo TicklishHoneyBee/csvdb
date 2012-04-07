@@ -1565,7 +1565,11 @@ end_rows:
 			col = column_resolve(c->value,r);
 			if (col) {
 				n = column_fetch_data(t,col);
-				strcpy(buff,n->value);
+				if (n) {
+					strcpy(buff,n->value);
+				}else{
+					buff[0] = 0;
+				}
 			}else{
 				buff[0]= 0;
 			}
