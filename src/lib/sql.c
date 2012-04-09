@@ -1634,8 +1634,10 @@ void sql_update(result_t *r)
 	l = l->next;
 
 	while (l) {
-		if (!strcmp(l->value,","))
+		if (!strcmp(l->value,",")) {
+			l = l->next;
 			continue;
+		}
 		if (is_keyword(l->value))
 			break;
 
