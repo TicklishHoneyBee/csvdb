@@ -53,3 +53,10 @@
 	 when loading files from csvdb shell
 	- switched to using readline as default shell
 	- add gettext support
+0.5.1
+	- bugfix to remove endless loop in UPDATE
+	- bugfix to INSERT to prevent segfault when inserting empty
+	 strings
+	- bugfix to csv parser, don't drop row ends after enclosed last
+	 column
+	- bugfix to ORDER, stop dropping row data
