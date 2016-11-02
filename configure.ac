@@ -20,7 +20,7 @@ AC_COPYRIGHT(
 ])
 
 dnl actually this is GNU so foreign isn't needed but automake begs to differ
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 AC_PROG_CC
 AC_PROG_LIBTOOL

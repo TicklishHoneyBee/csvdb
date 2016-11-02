@@ -27,3 +27,4 @@ texinfo.tex
 *.info
 *.pc
 ylwrap
+*.dirstamp
