@@ -18,6 +18,7 @@
 
 #include "csvdb.h"
 
+#ifdef _CSVDB_USE_OLD_TICK
 unsigned int ticks()
 {
 	unsigned int ticks;
@@ -26,6 +27,16 @@ unsigned int ticks()
 	ticks = (now.tv_sec*1000)+(now.tv_usec/1000);
 	return ticks;
 }
+#else
+unsigned int ticks()
+{
+	unsigned int ticks;
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME,&now);
+	ticks = (now.tv_sec*1000)+(now.tv_nsec/1000000);
+	return ticks;
+}
+#endif
 
 /* split a query into keywords */
 nvp_t *sql_split(char* q)
