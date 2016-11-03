@@ -60,3 +60,9 @@
 	- bugfix to csv parser, don't drop row ends after enclosed last
 	 column
 	- bugfix to ORDER, stop dropping row data
+0.6
+	- add support for IBM AIX
+	- clean up some incompatible compiler flags
+	- update to sql ticks() to remove functions deprecated by POSIX
+	- switch to gnu99 compiler standard
+	- some updates for autotools
