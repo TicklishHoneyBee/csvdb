@@ -71,7 +71,6 @@ table_t *table_load_apache(char* file)
 	int key;
 	int b;
 	int l;
-	int s;
 	int tm;
 	size_t r;
 	int cc = 0;
@@ -97,7 +96,6 @@ table_t *table_load_apache(char* file)
 
 	b = 0;
 	l = 0;
-	s = 0;
 	tm = 0;
 	r = 1;
 	fl = 0;

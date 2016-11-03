@@ -26,7 +26,7 @@ AC_PROG_CC
 AC_PROG_LIBTOOL
 AC_CONFIG_MACRO_DIR([m4])
 
-CFLAGS="${CFLAGS} -Wall -ansi -pedantic -D_GNU_SOURCE"
+CFLAGS="${CFLAGS} -Wall -std=gnu99 -D_GNU_SOURCE"
 
 AC_ARG_WITH([readline], [dnl
 AS_HELP_STRING([--with-readline], [

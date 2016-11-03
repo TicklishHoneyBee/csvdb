@@ -48,14 +48,12 @@ nvp_t *sql_split(char* q)
 	int b;
 	int l;
 	int s;
-	int se;
 	int i;
 	int ws = 0;
 
 	b = 0;
 	l = strlen(q)+1;
 	s = 0;
-	se = 0;
 	for (i=0; i<l; i++) {
 		c = q[i];
 		if (!q[i])
@@ -68,7 +66,6 @@ nvp_t *sql_split(char* q)
 					b--;
 				}else{
 					s = 0;
-					se = 1;
 					ws = 1;
 					goto column_end;
 				}
@@ -1377,10 +1374,7 @@ void sql_create(result_t *r)
 	nvp_t *l;
 	nvp_t *n;
 	table_t *t;
-	char* b;
 	int bc = 0;
-	int ine = 0;
-	b = strdup(r->q);
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
 		error(r,CSVDB_ERROR_SYNTAX,l->value);
@@ -1406,7 +1400,6 @@ void sql_create(result_t *r)
 			return;
 		}
 		l = l->next;
-		ine = 1;
 		if (!l->next) {
 			error(r,CSVDB_ERROR_SYNTAX,l->value);
 			return;
@@ -1473,11 +1466,8 @@ void sql_insert(result_t *r)
 	row_t *row;
 	row_t *t;
 	column_ref_t *col;
-	char* b;
-	int ig = 0;
 	char buff[1024];
 	int key;
-	b = strdup(r->q);
 	if (nvp_count(r->keywords) < 7) {
 		l = r->keywords;
 		error(r,CSVDB_ERROR_SYNTAX,l->value);
@@ -1485,7 +1475,6 @@ void sql_insert(result_t *r)
 	}
 	l = r->keywords->next;
 	if (!strcasecmp(l->value,"IGNORE")) {
-		ig = 1;
 		l = l->next;
 	}
 	if (strcasecmp(l->value,"INTO")) {
@@ -1616,7 +1605,6 @@ void sql_update(result_t *r)
 	int k;
 	int wor = 0;
 	char buff[1024];
-	int ign = 0;
 	if (nvp_count(r->keywords) < 4) {
 		l = nvp_last(r->keywords);
 		error(r,CSVDB_ERROR_SYNTAX,l->value);
@@ -1628,7 +1616,6 @@ void sql_update(result_t *r)
 
 	l = r->keywords->next;
 	if (!strcasecmp(l->value,"IGNORE")) {
-		ign = 1;
 		l = l->next;
 	}
 	n = l;
